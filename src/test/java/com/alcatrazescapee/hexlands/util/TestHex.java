@@ -1,10 +1,15 @@
+/*
+ * Part of the HexLands mod.
+ * Licensed under MIT. See the project LICENSE.txt for details.
+ */
+
 package com.alcatrazescapee.hexlands.util;
 
 import org.junit.jupiter.api.Test;
 import org.quicktheories.WithQuickTheories;
 import org.quicktheories.dsl.TheoryBuilder3;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestHex implements WithQuickTheories
 {

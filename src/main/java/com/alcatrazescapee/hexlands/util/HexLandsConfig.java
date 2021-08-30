@@ -1,3 +1,8 @@
+/*
+ * Part of the HexLands mod.
+ * Licensed under MIT. See the project LICENSE.txt for details.
+ */
+
 package com.alcatrazescapee.hexlands.util;
 
 import java.util.function.Function;

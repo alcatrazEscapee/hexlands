@@ -1,3 +1,8 @@
+/*
+ * Part of the HexLands mod.
+ * Licensed under MIT. See the project LICENSE.txt for details.
+ */
+
 package com.alcatrazescapee.hexlands;
 
 import org.apache.logging.log4j.LogManager;

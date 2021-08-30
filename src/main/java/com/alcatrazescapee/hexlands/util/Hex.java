@@ -1,3 +1,8 @@
+/*
+ * Part of the HexLands mod.
+ * Licensed under MIT. See the project LICENSE.txt for details.
+ */
+
 package com.alcatrazescapee.hexlands.util;
 
 import net.minecraft.util.math.BlockPos;
@@ -7,7 +12,7 @@ import net.minecraft.util.math.BlockPos;
  */
 public final class Hex
 {
-    private static final double SQRT_3 = Math.sqrt(3);
+    private static final double SQRT_3 = 1.7320508075688772;
 
     /**
      * Calculates the containing hex of block coordinates {@code (x, z)}.
