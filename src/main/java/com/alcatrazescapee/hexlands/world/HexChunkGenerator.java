@@ -135,7 +135,7 @@ public class HexChunkGenerator extends ChunkGenerator
     @Override
     public ChunkGenerator withSeed(long seed)
     {
-        return new HexChunkGenerator(hexBiomeSource, settings, seed);
+        return new HexChunkGenerator(hexBiomeSource.withSeed(seed), settings, seed);
     }
 
     @Override

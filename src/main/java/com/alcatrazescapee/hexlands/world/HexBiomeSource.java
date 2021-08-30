@@ -52,9 +52,9 @@ public class HexBiomeSource extends BiomeProvider
     }
 
     @Override
-    public BiomeProvider withSeed(long seed)
+    public HexBiomeSource withSeed(long seed)
     {
-        return new HexBiomeSource(parent, biomeRegistry, settings, seed);
+        return new HexBiomeSource(parent.withSeed(seed), biomeRegistry, settings, seed);
     }
 
     public HexSettings hexSettings()
