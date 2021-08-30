@@ -5,8 +5,7 @@
 
 package com.alcatrazescapee.hexlands.world;
 
-import java.lang.reflect.Constructor;
-import java.util.Optional;
+import java.lang.reflect.Method;
 import java.util.function.Supplier;
 
 import org.apache.logging.log4j.LogManager;
@@ -28,8 +27,8 @@ import net.minecraft.world.gen.settings.DimensionGeneratorSettings;
 import net.minecraftforge.common.ForgeConfig;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.common.world.ForgeWorldType;
-import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.RegistryObject;
+import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 
@@ -47,6 +46,9 @@ public class HexLandsWorldType
 
     private static final Logger LOGGER = LogManager.getLogger();
 
+    private static final Method DEFAULT_NETHER_GENERATOR = ObfuscationReflectionHelper.findMethod(DimensionType.class, "func_242720_b", Registry.class, Registry.class, long.class); // defaultNetherGenerator
+    private static final Method DEFAULT_END_GENERATOR = ObfuscationReflectionHelper.findMethod(DimensionType.class, "func_242717_a", Registry.class, Registry.class, long.class); // defaultEndGenerator
+
     @SuppressWarnings({"unchecked", "rawtypes"})
     public static void setDefault()
     {
@@ -59,27 +61,6 @@ public class HexLandsWorldType
     private static RegistryObject<ForgeWorldType> register(String name, Supplier<ForgeWorldType.IChunkGeneratorFactory> factory)
     {
         return WORLD_TYPES.register(name, () -> new ForgeWorldType(factory.get()));
-    }
-
-    private static Optional<BiomeProvider> grabBYGNetherBiomeProvider(Registry<Biome> biomes, long seed)
-    {
-        // Horrible horrible hacks to find a BYG biome provider, if it exists
-        if (!ModList.get().isLoaded("byg"))
-        {
-            return Optional.empty();
-        }
-        try
-        {
-            final Class<?> cls = Class.forName("corgiaoc.byg.common.world.dimension.nether.BYGNetherBiomeSource");
-            final Constructor<?> ctor = cls.getConstructor(Registry.class, long.class);
-            final BiomeProvider provider = (BiomeProvider) ctor.newInstance(biomes, seed);
-            return Optional.of(provider);
-        }
-        catch (Exception e)
-        {
-            LOGGER.warn("Cannot find BYG biome source", e);
-        }
-        return Optional.empty();
     }
 
     static class Impl implements ForgeWorldType.IBasicChunkGeneratorFactory
@@ -124,15 +105,32 @@ public class HexLandsWorldType
 
         private ChunkGenerator createNetherChunkGenerator(Registry<Biome> biomeRegistry, Registry<DimensionSettings> dimensionSettingsRegistry, long seed)
         {
-            final BiomeProvider nether = grabBYGNetherBiomeProvider(biomeRegistry, seed)
-                .orElseGet(() -> NetherBiomeProvider.Preset.NETHER.biomeSource(biomeRegistry, seed));
+            BiomeProvider nether;
+            try
+            {
+                final ChunkGenerator generator = (ChunkGenerator) DEFAULT_NETHER_GENERATOR.invoke(null, biomeRegistry, dimensionSettingsRegistry, seed);
+                nether = generator.getBiomeSource();
+            }
+            catch (Exception e)
+            {
+                LOGGER.warn("Something went wrong, using vanilla nether generator: ", e);
+                nether = NetherBiomeProvider.Preset.NETHER.biomeSource(biomeRegistry, seed);
+            }
             final HexBiomeSource hex = new HexBiomeSource(nether, biomeRegistry, HexSettings.NETHER, seed);
             return new HexChunkGenerator(hex, () -> dimensionSettingsRegistry.getOrThrow(DimensionSettings.NETHER), seed);
         }
 
         private ChunkGenerator createEndChunkGenerator(Registry<Biome> biomeRegistry, Registry<DimensionSettings> dimensionSettingsRegistry, long seed)
         {
-            return new NoiseChunkGenerator(new EndBiomeProvider(biomeRegistry, seed), seed, () -> dimensionSettingsRegistry.getOrThrow(DimensionSettings.END));
+            try
+            {
+                return (ChunkGenerator) DEFAULT_END_GENERATOR.invoke(null, biomeRegistry, dimensionSettingsRegistry, seed);
+            }
+            catch (Exception e)
+            {
+                LOGGER.warn("Something went wrong, using vanilla end generator: ", e);
+                return new NoiseChunkGenerator(new EndBiomeProvider(biomeRegistry, seed), seed, () -> dimensionSettingsRegistry.getOrThrow(DimensionSettings.END));
+            }
         }
     }
 }

@@ -9,7 +9,6 @@ This mod is an updated and rewritten version of the original [Hex Lands](https:/
 - Adds two world type presets: "HexLands", and "HexLands (Overworld)". The former which enables hexagonal terrain generation in both the overworld and the nether, the latter which only enables it in the overworld.
 - Each hex contains a single biome. Hexes of different types are bordered by walls.
 - Automatic compatibility with mods that add biomes to the overworld or other world generation.
-- Explicit compatibility with BYG's nether biomes.
 - Many options for world customization via data packs.
 
 ### Data Packs
