@@ -2,7 +2,7 @@
 
 ![Hex Lands Overworld](./img/hex_overworld.png)
 
-This mod is an updated and rewritten version of the original [Hex Lands](https://www.curseforge.com/minecraft/mc-mods/hex-lands) mod by SuperFluke, et. al. It has been re-done completely from scratch in Minecraft 1.16.5.
+This mod is an updated and rewritten version of the original [Hex Lands](https://www.curseforge.com/minecraft/mc-mods/hex-lands) mod by superfluke, et. al. It has been re-done completely from scratch in Minecraft 1.16.5.
 
 ### Features
 
@@ -27,7 +27,7 @@ In order to change a dimension to use hex based generation, you need to override
 - `seed` is a `long`. It is the seed of the world. (This will be overriden by a seed in the world creation screen, or server.properties if not present.)
 - `settings` is a [Noise Settings](https://minecraft.fandom.com/wiki/Custom_world_generation#Noise_settings) used by the dimension. The default value is `"minecraft:overworld"`.
 - `biome_source` is an object representing the biomes in the world. It must be a Hex Lands biome source, with the following fields:
-    - `type` is a string identifying what biome source to use. Must be `hexlands:hexlands`
+    - `type` is a string identifying what biome source to use. Must be `hexlands:hexlands`.
     - `seed` is a long. It is the seed used by the biome source. (This will be overriden by a seed in the world creation screen, or server.properties if not present.)
     - `biome_source` is the biome source used by the hexlands biomes. It can be any biome source in vanilla. The default one used is `minecraft:vanilla_layered`. This will include modded biomes if they add biomes to the normal overworld.
     - `biome_scale` is a double between `0.01` and `1000`. It represents the scale of the biomes in hexes. Lower values will make biomes closer together, larger values will create more adjacent hexes of the same biome. The default in the overworld is `8`, the default in the nether is `4`.
@@ -64,7 +64,7 @@ In order to change a dimension to use hex based generation, you need to override
 
 ### World Types
 
-Hex Lands adds two world types. By default, it will overwrite the Forge config option for world types and set it to `hexlands:hexlands`. This can be disabled in the `hexlnds-common.toml` config.
+Hex Lands adds two world types. By default, it will overwrite the Forge config option for world types and set it to `hexlands:hexlands`. This can be disabled in the `hexlands-common.toml` config.
 
 - `hexlands:hexlands` This is the default Hex Lands world type. It will use hex based terrain generation in the overworld and nether.
 - `hexlands:hexlands_overworld_only` This will only use hex based terrain generation in the overworld.
@@ -72,9 +72,8 @@ Hex Lands adds two world types. By default, it will overwrite the Forge config o
 To set the world type, consult the option in the `forge-common.toml` config file:
 
 ```toml
-[general]
-#Defines a default world type to use. The vanilla default world type is represented by 'default'.
-#The modded world types are registry names which should include the registry namespace, such as 'examplemod:example_world_type'.
+# Defines a default world type to use. The vanilla default world type is represented by 'default'.
+# The modded world types are registry names which should include the registry namespace, such as 'examplemod:example_world_type'.
 defaultWorldType = "hexlands:hexlands"
 ```
 
