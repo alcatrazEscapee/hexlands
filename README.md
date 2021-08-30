@@ -16,9 +16,9 @@ All of Hex Lands's world generation is exposed to datapacks. If you're not famil
 - [Custom World Generation](https://minecraft.fandom.com/wiki/Custom_world_generation)
 - [Custom Dimensions](https://minecraft.fandom.com/wiki/Custom_dimension)
 
-In order to change a dimension to use hex based generation, you need to override the [Dimension] json. For example, in the overworld, this would be `data/minecraft/dimension/overworld.json`. This is used in the `generator` field of a dimension json. It is an object, which has the following fields.
+In order to change a dimension to use hex based generation, you need to override the [dimension](https://minecraft.fandom.com/wiki/Custom_dimension#Dimension_syntax) json. For example, in the overworld, this would be `data/minecraft/dimension/overworld.json`. This is used in the `generator` field of a dimension json. It is an object, which has the following fields.
 
-**Note**: Anywhere where the term "default value" is used does not mean the field is not required! It means that is the value used by the Hex Land's generation presets.
+**Note**: Anywhere below where the term "default value" is used does not mean the field is not required! It means that is the value used by the Hex Land's generation presets.
 
 - `type` is a string identifying what chunk generator to use. Must be `hexlands:hexlands`.
 - `seed` is a `long`. It is the seed of the world. (This will be overriden by a seed in the world creation screen, or server.properties if not present.)

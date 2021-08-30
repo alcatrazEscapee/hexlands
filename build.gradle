@@ -11,6 +11,7 @@ buildscript {
 }
 
 plugins {
+    id 'com.matthewprenger.cursegradle' version '1.4.0'
     id 'net.minecrell.licenser' version '0.4.1'
     id 'idea'
 }
@@ -29,7 +30,7 @@ def mappingsVersion = project.hasProperty('mappings_version') ? mappings_version
 println "Using mappings: " + mappingsChannel + " / " + mappingsVersion
 
 group = "com.alcatrazescapee.hexlands"
-archivesBaseName = "HexLands-Forge-${minecraft_version}"
+archivesBaseName = "hexlands-forge-${minecraft_version}"
 
 // Use version from environment variable, if set
 def envVersion = System.getenv('VERSION')
@@ -112,5 +113,20 @@ jar {
         attributes ([
                 "Implementation-Version": "${project.version}"
         ])
+    }
+}
+
+curseforge {
+    project {
+        def envApiKey = System.getenv('CURSEFORGE_API_KEY')
+        apiKey = envApiKey == null ? 'nope' : envApiKey
+
+        id = '522216' // Hex Lands
+
+        changelog = "[Release Notes ${version}](https://github.com/alcatrazEscapee/hexlands/releases/tag/v${version})"
+        changelogType = "markdown"
+
+        releaseType = 'release'
+        addGameVersion "${minecraft_version}"
     }
 }
