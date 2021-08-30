@@ -5,6 +5,7 @@
 
 !gradle/**
 !src/**
+!img/**/*.png
 
 # Metadata
 !build.gradle

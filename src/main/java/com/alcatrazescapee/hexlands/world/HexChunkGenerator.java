@@ -5,7 +5,9 @@
 
 package com.alcatrazescapee.hexlands.world;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -16,7 +18,10 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.EntityClassification;
 import net.minecraft.util.SharedSeedRandom;
-import net.minecraft.util.math.*;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.MutableBoundingBox;
 import net.minecraft.world.Blockreader;
 import net.minecraft.world.IBlockReader;
 import net.minecraft.world.IWorld;
@@ -28,9 +33,7 @@ import net.minecraft.world.chunk.ChunkSection;
 import net.minecraft.world.chunk.IChunk;
 import net.minecraft.world.gen.*;
 import net.minecraft.world.gen.feature.jigsaw.JigsawJunction;
-import net.minecraft.world.gen.feature.jigsaw.JigsawPattern;
 import net.minecraft.world.gen.feature.structure.AbstractVillagePiece;
-import net.minecraft.world.gen.feature.structure.Structure;
 import net.minecraft.world.gen.feature.structure.StructureManager;
 import net.minecraft.world.gen.feature.structure.StructurePiece;
 import net.minecraft.world.gen.settings.NoiseSettings;
@@ -142,9 +145,9 @@ public class HexChunkGenerator extends ChunkGenerator
         random.setBaseChunkSeed(chunkIn.getPos().x, chunkIn.getPos().z);
 
         final ChunkPos chunkPos = chunkIn.getPos();
-        final int blockX = chunkPos.getMinBlockX();
-        final int blockZ = chunkPos.getMinBlockZ();
-        final BlockPos.Mutable pos = new BlockPos.Mutable();
+        final int blockX = chunkPos.getMinBlockX(), blockZ = chunkPos.getMinBlockZ();
+
+        final Map<Hex, Biome> biomesByHex = new HashMap<>();
 
         final double hexScale = hexSettings.biomeScale();
         final double hexSize = hexSettings.hexSize() * hexScale;
@@ -158,17 +161,22 @@ public class HexChunkGenerator extends ChunkGenerator
                 final int z = blockZ + localZ;
 
                 final Hex hex = Hex.blockToHex(x * hexScale, z * hexScale, hexSize);
+                final Hex adjacentHex = hex.adjacent(x * hexScale, z * hexScale);
+
                 final int y = chunkIn.getHeight(Heightmap.Type.WORLD_SURFACE_WG, localX, localZ) + 1;
-                final double surfaceNoiseValue = surfaceNoise.getSurfaceNoiseValue(x * 0.0625D, z * 0.0625D, 0.0625D, localX * 0.0625D) * 15.0D;
-                final Biome biome = world.getBiome(pos.set(x, y, z));
-                if (hex.radius(x * hexScale, z * hexScale) < hexBorder)
+                final double noise = surfaceNoise.getSurfaceNoiseValue(x * 0.0625D, z * 0.0625D, 0.0625D, localX * 0.0625D) * 15.0D;
+                final Biome biome = biomesByHex.computeIfAbsent(hex, hexBiomeSource::getHexBiome);
+                if (hex.radius(x * hexScale, z * hexScale) >= hexBorder)
                 {
-                    biome.buildSurfaceAt(random, chunkIn, x, z, y, surfaceNoiseValue, defaultBlock, defaultFluid, getSeaLevel(), world.getSeed());
+                    final Biome adjacentBiome = biomesByHex.computeIfAbsent(adjacentHex, hexBiomeSource::getHexBiome);
+                    if (adjacentBiome != biome)
+                    {
+                        hexBorderSurfaceBuilder.apply(random, chunkIn, biome, x, z, y, noise, defaultBlock, defaultFluid, getSeaLevel(), world.getSeed(), hexBorderSurfaceBuilderConfig);
+                        continue;
+                    }
                 }
-                else
-                {
-                    hexBorderSurfaceBuilder.apply(random, chunkIn, biome, x, z, y, surfaceNoiseValue, defaultBlock, defaultFluid, getSeaLevel(), world.getSeed(), hexBorderSurfaceBuilderConfig);
-                }
+                // Otherwise
+                biome.buildSurfaceAt(random, chunkIn, x, z, y, noise, defaultBlock, defaultFluid, getSeaLevel(), world.getSeed());
             }
         }
 
@@ -192,7 +200,7 @@ public class HexChunkGenerator extends ChunkGenerator
 
     public int getGenDepth()
     {
-        return this.height;
+        return height;
     }
 
     @Override
@@ -209,67 +217,37 @@ public class HexChunkGenerator extends ChunkGenerator
     @Override
     public void fillFromNoise(IWorld world, StructureManager structureManager, IChunk chunkIn)
     {
-        final int blockX = chunkIn.getPos().getMinBlockX(), blockZ = chunkIn.getPos().getMinBlockZ();
-        final Hex[] hexes = new Hex[16 * 16];
-        final Biome[] hexBiomes = new Biome[16 * 16];
+        final ChunkPos chunkPos = chunkIn.getPos();
+        final int chunkX = chunkPos.x, chunkZ = chunkPos.z;
+        final int blockX = chunkPos.getMinBlockX(), blockZ = chunkPos.getMinBlockZ();
+        final Hex[] hexes = new Hex[16 * 16], adjacentHexes = new Hex[16 * 16];
+        final Map<Hex, Biome> biomesByHex = new HashMap<>();
 
         final double hexScale = hexSettings.biomeScale();
         final double hexSize = hexSettings.hexSize() * hexScale;
         final double hexBorder = hexSettings.hexBorderThreshold();
 
+        // Iterate each chunk position and identify the containing hex, and adjacent hex
         for (int x = 0; x < 16; x++)
         {
             for (int z = 0; z < 16; z++)
             {
                 final int hx = blockX + x, hz = blockZ + z;
-                hexes[x + 16 * z] = Hex.blockToHex(hx * hexScale, hz * hexScale, hexSize);
-                hexBiomes[x + 16 * z] = hexBiomeSource.getHexBiome(hx, hz);
+                final Hex hex = Hex.blockToHex(hx * hexScale, hz * hexScale, hexSize);
+                final Hex adjacent = hex.adjacent(hx * hexScale, hz * hexScale);
+
+                hexes[x + 16 * z] = hex;
+                adjacentHexes[x + 16 * z] = adjacent;
+
+                // Sample biomes once per each hex we encounter in the main grid.
+                biomesByHex.computeIfAbsent(hex, hexBiomeSource::getHexBiome);
+                biomesByHex.computeIfAbsent(adjacent, hexBiomeSource::getHexBiome);
             }
         }
 
         final ObjectList<StructurePiece> pieces = new ObjectArrayList<>(10);
         final ObjectList<JigsawJunction> junctions = new ObjectArrayList<>(32);
-        final ChunkPos chunkpos = chunkIn.getPos();
-        final int chunkX = chunkpos.x;
-        final int chunkZ = chunkpos.z;
-        final int bigChunkX = chunkX << 4;
-        final int bigChunkZ = chunkZ << 4;
-
-        for (Structure<?> structure : Structure.NOISE_AFFECTING_FEATURES)
-        {
-            structureManager.startsForFeature(SectionPos.of(chunkpos, 0), structure).forEach(start -> {
-                for (StructurePiece piece : start.getPieces())
-                {
-                    if (piece.isCloseToChunk(chunkpos, 12))
-                    {
-                        if (piece instanceof AbstractVillagePiece)
-                        {
-                            AbstractVillagePiece villagePiece = (AbstractVillagePiece) piece;
-                            JigsawPattern.PlacementBehaviour behavior = villagePiece.getElement().getProjection();
-                            if (behavior == JigsawPattern.PlacementBehaviour.RIGID)
-                            {
-                                pieces.add(villagePiece);
-                            }
-
-                            for (JigsawJunction junction : villagePiece.getJunctions())
-                            {
-                                int l5 = junction.getSourceX();
-                                int i6 = junction.getSourceZ();
-                                if (l5 > bigChunkX - 12 && i6 > bigChunkZ - 12 && l5 < bigChunkX + 15 + 12 && i6 < bigChunkZ + 15 + 12)
-                                {
-                                    junctions.add(junction);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            pieces.add(piece);
-                        }
-                    }
-                }
-
-            });
-        }
+        Beardifier.sampleStructureContributions(chunkIn, structureManager, pieces, junctions);
 
         final double[][][] noiseValues = new double[2][chunkCountZ + 1][chunkCountY + 1];
         for (int z = 0; z < chunkCountZ + 1; ++z)
@@ -333,7 +311,7 @@ public class HexChunkGenerator extends ChunkGenerator
 
                         for (int localX = 0; localX < chunkWidth; ++localX)
                         {
-                            final int x = bigChunkX + cellX * chunkWidth + localX;
+                            final int x = blockX + cellX * chunkWidth + localX;
                             final int sectionX = x & 15;
                             final double deltaX = (double) localX / chunkWidth;
 
@@ -343,13 +321,14 @@ public class HexChunkGenerator extends ChunkGenerator
 
                             for (int localZ = 0; localZ < chunkWidth; ++localZ)
                             {
-                                final int z = bigChunkZ + cellZ * chunkWidth + localZ;
+                                final int z = blockZ + cellZ * chunkWidth + localZ;
                                 final int sectionZ = z & 15;
                                 final double deltaZ = (double) localZ / chunkWidth;
 
                                 final double noise = MathHelper.lerp(deltaZ, noise0, noise1);
                                 double clampedNoise = MathHelper.clamp(noise / 200.0D, -1.0D, 1.0D);
 
+                                // More beardifier nonsense
                                 int x0, y0, z0;
                                 for (clampedNoise = clampedNoise / 2.0D - clampedNoise * clampedNoise * clampedNoise / 24.0D; pieceIterator.hasNext(); clampedNoise += Beardifier.getContribution(x0, y0, z0) * 0.8D)
                                 {
@@ -371,11 +350,21 @@ public class HexChunkGenerator extends ChunkGenerator
                                 }
                                 junctionIterator.back(junctions.size());
 
+                                // Hex borders
                                 final Hex hex = hexes[sectionX + sectionZ * 16];
                                 if (hex.radius(x * hexScale, z * hexScale) > hexBorder)
                                 {
-                                    final Biome biome = hexBiomes[sectionX + sectionZ * 16];
-                                    clampedNoise = applyHexBorderNoiseModifier(hex, biome, hexBorderRandom, y);
+                                    final Biome biome = biomesByHex.get(hex);
+                                    final Hex adjacentHex = adjacentHexes[sectionX + sectionZ * 16];
+                                    final Biome adjacentBiome = biomesByHex.get(adjacentHex);
+
+                                    assert biome != null;
+                                    assert adjacentBiome != null;
+
+                                    if (biome != adjacentBiome) // No borders between adjacent hexes of the same biome
+                                    {
+                                        clampedNoise = applyHexBorderNoiseModifier(hex, biome, hexBorderRandom, y);
+                                    }
                                 }
 
                                 final BlockState state = generateBaseState(clampedNoise, y);
@@ -439,7 +428,7 @@ public class HexChunkGenerator extends ChunkGenerator
     {
         // Really really hacky way to get some sensible variety between hex border heights.
         random.setSeed(HashCommon.murmurHash3(hex.hashCode()));
-        if (biome.getBiomeCategory() == Biome.Category.NETHER)
+        if (hexSettings.windowedBorder())
         {
             final int roof = height + 1 - settings().getBedrockRoofPosition() - 30 - random.nextInt(10) - random.nextInt(10);
             final int floor = settings().getBedrockFloorPosition() + 30 + random.nextInt(5) + random.nextInt(5);
@@ -447,30 +436,9 @@ public class HexChunkGenerator extends ChunkGenerator
         }
         else
         {
-            double depth = getHexBorderDepth(biome.getBiomeCategory());
-            final int adjustedHeight = (int) (getSeaLevel() + depth + random.nextInt(4) - random.nextInt(4));
+            final double biomeHeight = getBaseBiomeHeight(biome) * chunkHeight;
+            final int adjustedHeight = (int) (biomeHeight + random.nextInt(4) - random.nextInt(4));
             return y < adjustedHeight ? 1 : -1;
-        }
-    }
-
-    protected double getHexBorderDepth(Biome.Category category)
-    {
-        switch (category)
-        {
-            case OCEAN:
-                return -14;
-            case BEACH:
-                return -2;
-            case MESA:
-                return 14;
-            case RIVER:
-                return -3;
-            case SWAMP:
-                return -1;
-            case EXTREME_HILLS:
-                return 18;
-            default:
-                return 4;
         }
     }
 
@@ -490,44 +458,60 @@ public class HexChunkGenerator extends ChunkGenerator
         }
     }
 
+    protected double getBaseBiomeHeight(Biome biome)
+    {
+        // No random density offset, since we don't take into account the cellX/Z of the hex center
+        final NoiseSettings noiseSettings = settings().noiseSettings();
+        final double densityFactor = noiseSettings.densityFactor();
+        final double densityOffset = noiseSettings.densityOffset();
+
+        double depth = biome.getDepth();
+        if (noiseSettings.isAmplified() && depth > 0.0F)
+        {
+            depth = 1.0F + depth * 2.0F;
+        }
+        depth = (depth * 0.5F - 0.125F) * 0.265625D;
+
+        // cellY
+        return (1 + (depth + densityOffset) / densityFactor) * (chunkCountY / 2.0D);
+    }
+
     protected void fillNoiseColumn(double[] noiseColumn, int cellX, int cellZ)
     {
-        NoiseSettings noiseSettings = settings().noiseSettings();
-        Biome hexBiome = hexBiomeSource.getNoiseBiome(cellX, getSeaLevel(), cellZ);
-        float scale = hexBiome.getScale();
-        float depth = hexBiome.getDepth();
+        final NoiseSettings noiseSettings = settings().noiseSettings();
+        final Biome hexBiome = hexBiomeSource.getNoiseBiome(cellX, getSeaLevel(), cellZ);
 
+        final double xzScale = 684.412D * noiseSettings.noiseSamplingSettings().xzScale();
+        final double yScale = 684.412D * noiseSettings.noiseSamplingSettings().yScale();
+        final double xzFactor = xzScale / noiseSettings.noiseSamplingSettings().xzFactor();
+        final double yFactor = yScale / noiseSettings.noiseSamplingSettings().yFactor();
+        final double topSlideTarget = noiseSettings.topSlideSettings().target();
+        final double topSlideSize = noiseSettings.topSlideSettings().size();
+        final double topSlideOffset = noiseSettings.topSlideSettings().offset();
+        final double bottomSlideTarget = noiseSettings.bottomSlideSettings().target();
+        final double bottomSlideSize = noiseSettings.bottomSlideSettings().size();
+        final double bottomSlideOffset = noiseSettings.bottomSlideSettings().offset();
+        final double randomDensityOffset = noiseSettings.randomDensityOffset() ? getRandomDensity(cellX, cellZ) : 0.0D;
+        final double densityFactor = noiseSettings.densityFactor();
+        final double densityOffset = noiseSettings.densityOffset();
+
+        double scale = hexBiome.getScale();
+        double depth = hexBiome.getDepth();
         if (noiseSettings.isAmplified() && depth > 0.0F)
         {
             depth = 1.0F + depth * 2.0F;
             scale = 1.0F + scale * 4.0F;
         }
 
-        double depth0 = depth * 0.5F - 0.125F;
-        double scale0 = scale * 0.9F + 0.1F;
-        double depth1 = depth0 * 0.265625D;
-        double scale1 = 96.0D / scale0;
+        depth = (depth * 0.5F - 0.125F) * 0.265625D;
+        scale = 96.0D / (scale * 0.9F + 0.1F);
 
-        double xzScale = 684.412D * noiseSettings.noiseSamplingSettings().xzScale();
-        double yScale = 684.412D * noiseSettings.noiseSamplingSettings().yScale();
-        double xzFactor = xzScale / noiseSettings.noiseSamplingSettings().xzFactor();
-        double yFactor = yScale / noiseSettings.noiseSamplingSettings().yFactor();
-        double topSlideTarget = noiseSettings.topSlideSettings().target();
-        double topSlideSize = noiseSettings.topSlideSettings().size();
-        double topSlideOffset = noiseSettings.topSlideSettings().offset();
-        double bottomSlideTarget = noiseSettings.bottomSlideSettings().target();
-        double bottomSlideSize = noiseSettings.bottomSlideSettings().size();
-        double bottomSlideOffset = noiseSettings.bottomSlideSettings().offset();
-        double randomDensityOffset = noiseSettings.randomDensityOffset() ? this.getRandomDensity(cellX, cellZ) : 0.0D;
-        double densityFactor = noiseSettings.densityFactor();
-        double densityOffset = noiseSettings.densityOffset();
-
-        for (int cellY = 0; cellY <= this.chunkCountY; ++cellY)
+        for (int cellY = 0; cellY <= chunkCountY; ++cellY)
         {
             double noise0 = sampleAndClampNoise(cellX, cellY, cellZ, xzScale, yScale, xzFactor, yFactor);
             double noise1 = 1.0D - cellY * 2.0D / chunkCountY + randomDensityOffset;
             double noise2 = noise1 * densityFactor + densityOffset;
-            double noise3 = (noise2 + depth1) * scale1;
+            double noise3 = (noise2 + depth) * scale;
             if (noise3 > 0.0D)
             {
                 noise0 = noise0 + noise3 * 4.0D;
@@ -608,9 +592,9 @@ public class HexChunkGenerator extends ChunkGenerator
         final int blockZ = chunkIn.getPos().getMinBlockZ();
         final DimensionSettings settings = settings();
         final int floorY = settings.getBedrockFloorPosition();
-        final int roofY = this.height - 1 - settings.getBedrockRoofPosition();
-        final boolean roof = roofY + 4 >= 0 && roofY < this.height;
-        final boolean floor = floorY + 4 >= 0 && floorY < this.height;
+        final int roofY = height - 1 - settings.getBedrockRoofPosition();
+        final boolean roof = roofY + 4 >= 0 && roofY < height;
+        final boolean floor = floorY + 4 >= 0 && floorY < height;
         if (roof || floor)
         {
             for (BlockPos pos : BlockPos.betweenClosed(blockX, 0, blockZ, blockX + 15, 0, blockZ + 15))

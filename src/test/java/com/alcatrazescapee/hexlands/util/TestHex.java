@@ -43,11 +43,41 @@ public class TestHex implements WithQuickTheories
     }
 
     @Test
+    public void testAdjacentFromXZ()
+    {
+        points()
+            .asWithPrecursor(Hex::new)
+            .checkAssert((q, r, size, hex) -> {
+                assertEquals(new Hex(q, r - 1, size), hex.adjacent(hex.x(), hex.z() - 1), "-z");
+                assertEquals(new Hex(q, r + 1, size), hex.adjacent(hex.x(), hex.z() + 1), "+z");
+                assertEquals(new Hex(q - 1, r, size), hex.adjacent(hex.x() - 1, hex.z() - 1), "-x/-z");
+                assertEquals(new Hex(q + 1, r, size), hex.adjacent(hex.x() + 1, hex.z() + 1), "+x/+z");
+                assertEquals(new Hex(q + 1, r - 1, size), hex.adjacent(hex.x() + 1, hex.z() - 1), "+x/-z");
+                assertEquals(new Hex(q - 1, r + 1, size), hex.adjacent(hex.x() - 1, hex.z() + 1), "-x/+z");
+            });
+    }
+
+    @Test
+    public void testAdjacentFromQR()
+    {
+        points()
+            .asWithPrecursor(Hex::new)
+            .checkAssert((q, r, size, hex) -> {
+                assertEquals(new Hex(q, r - 1, size), Hex.adjacent(q, r, q, r - 1, size), "-r");
+                assertEquals(new Hex(q, r + 1, size), Hex.adjacent(q, r, q, r + 1, size), "+r");
+                assertEquals(new Hex(q - 1, r, size), Hex.adjacent(q, r, q - 1, r, size), "-q");
+                assertEquals(new Hex(q + 1, r, size), Hex.adjacent(q, r, q + 1, r, size), "+q");
+                assertEquals(new Hex(q + 1, r - 1, size), Hex.adjacent(q, r, q + 1, r - 1, size), "+q/-r");
+                assertEquals(new Hex(q - 1, r + 1, size), Hex.adjacent(q, r, q - 1, r + 1, size), "-q/+r");
+            });
+    }
+
+    @Test
     public void testRadiusAtCenterIsZero()
     {
         points()
-            .as(Hex::new)
-            .check(hex -> hex.radius(hex.x(), hex.z()) < epsilon);
+            .asWithPrecursor(Hex::new)
+            .check((r, q, size, hex) -> hex.radius(hex.x(), hex.z()) < epsilon);
     }
 
     @Test

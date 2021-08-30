@@ -64,10 +64,16 @@ public class HexBiomeSource extends BiomeProvider
 
     public Biome getHexBiome(int x, int z)
     {
-        double scale = settings.biomeScale();
-        double size = settings.hexSize() * scale;
-        Hex hex = Hex.blockToHex(x * scale, z * scale, size);
-        BlockPos pos = hex.center();
+        final double scale = settings.biomeScale();
+        final double size = settings.hexSize() * scale;
+        final Hex hex = Hex.blockToHex(x * scale, z * scale, size);
+        final BlockPos pos = hex.center();
+        return parent.getNoiseBiome(pos.getX(), 0, pos.getZ());
+    }
+
+    public Biome getHexBiome(Hex hex)
+    {
+        final BlockPos pos = hex.center();
         return parent.getNoiseBiome(pos.getX(), 0, pos.getZ());
     }
 }

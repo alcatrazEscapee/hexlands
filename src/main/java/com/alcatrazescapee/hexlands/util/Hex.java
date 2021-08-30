@@ -110,6 +110,36 @@ public final class Hex
     }
 
     /**
+     * Calculates the nearest adjacent hex to an axial coordinate {@code (fq, fr)}, residing in a hex of axial coordinates {@code (q, r)}.
+     */
+    public static Hex adjacent(int q, int r, double fq, double fr, double size)
+    {
+        final double s = axialToCube(q, r);
+        final double fs = axialToCube(fq, fr);
+
+        final double dq = q - fq;
+        final double dr = r - fr;
+        final double ds = s - fs;
+
+        final double qr = Math.abs(dq - dr);
+        final double rs = Math.abs(dr - ds);
+        final double sq = Math.abs(ds - dq);
+
+        if (qr >= rs && qr >= sq)
+        {
+            return dr > dq ? new Hex(q + 1, r - 1, size) : new Hex(q - 1, r + 1, size);
+        }
+        else if (rs >= sq)
+        {
+            return dr > ds ? new Hex(q, r - 1, size) : new Hex(q, r + 1, size);
+        }
+        else
+        {
+            return ds > dq ? new Hex(q + 1, r, size) : new Hex(q - 1, r, size);
+        }
+    }
+
+    /**
      * Calculates the angular radius between an axial coordinate {@code (q, r)}, representing the hex center, and an axial coordinate {@code (fq, fr)} representing another point in the hex.
      *
      * @return A value in the range [0, 1].
@@ -125,9 +155,9 @@ public final class Hex
 
         final double qr = Math.abs(dq - dr);
         final double rs = Math.abs(dr - ds);
-        final double rq = Math.abs(ds - dq);
+        final double sq = Math.abs(ds - dq);
 
-        return (1d / 2d) * (qr + rs + rq);
+        return (1d / 2d) * (qr + rs + sq);
     }
 
     private final int q, r; // Axial / Cube coordinates: q = x, r = z
@@ -157,7 +187,17 @@ public final class Hex
     {
         final double fq = blockToHexQ(x, size);
         final double fr = blockToHexR(x, z, size);
-        return radius(q, r, fq, fr);
+        return Hex.radius(q, r, fq, fr);
+    }
+
+    /**
+     * Calculates the nearest adjacent hex to the given block coordinate {@code (x, z)} within this hex.
+     */
+    public Hex adjacent(double x, double z)
+    {
+        final double fq = blockToHexQ(x, size);
+        final double fr = blockToHexR(x, z, size);
+        return Hex.adjacent(q, r, fq, fr, size);
     }
 
     public int q()

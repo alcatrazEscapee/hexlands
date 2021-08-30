@@ -50,6 +50,9 @@ repositories {
 		// Blame
 		url "https://nexus.resourcefulbees.com/repository/maven-public/"
 	}
+    flatDir {
+        dirs 'libs'
+    }
 }
 
 minecraft {
@@ -97,6 +100,8 @@ dependencies {
     testImplementation 'org.quicktheories:quicktheories:0.26'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.3.1'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.3.1'
+
+    // runtimeOnly fg.deobf("libs:byg:1.3.2") // File: libs/byg-1.3.2.jar
 
     /* if (System.getProperty("idea.sync.active") != "true") {
         annotationProcessor "org.spongepowered:mixin:${mixin_version}:processor"

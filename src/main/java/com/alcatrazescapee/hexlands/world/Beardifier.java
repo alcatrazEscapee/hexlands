@@ -6,7 +6,18 @@
 package com.alcatrazescapee.hexlands.world;
 
 import net.minecraft.util.Util;
+import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.SectionPos;
+import net.minecraft.world.chunk.IChunk;
+import net.minecraft.world.gen.feature.jigsaw.JigsawJunction;
+import net.minecraft.world.gen.feature.jigsaw.JigsawPattern;
+import net.minecraft.world.gen.feature.structure.AbstractVillagePiece;
+import net.minecraft.world.gen.feature.structure.Structure;
+import net.minecraft.world.gen.feature.structure.StructureManager;
+import net.minecraft.world.gen.feature.structure.StructurePiece;
+
+import it.unimi.dsi.fastutil.objects.ObjectList;
 
 public class Beardifier
 {
@@ -22,6 +33,48 @@ public class Beardifier
             }
         }
     });
+
+    public static void sampleStructureContributions(IChunk chunkIn, StructureManager structureManager, ObjectList<StructurePiece> pieces, ObjectList<JigsawJunction> junctions)
+    {
+        final ChunkPos chunkPos = chunkIn.getPos();
+        final int blockX = chunkPos.getMinBlockX(), blockZ = chunkPos.getMinBlockZ();
+
+        for (Structure<?> structure : Structure.NOISE_AFFECTING_FEATURES)
+        {
+            structureManager.startsForFeature(SectionPos.of(chunkPos, 0), structure).forEach(start -> {
+                for (StructurePiece piece : start.getPieces())
+                {
+                    if (piece.isCloseToChunk(chunkPos, 12))
+                    {
+                        if (piece instanceof AbstractVillagePiece)
+                        {
+                            AbstractVillagePiece villagePiece = (AbstractVillagePiece) piece;
+                            JigsawPattern.PlacementBehaviour behavior = villagePiece.getElement().getProjection();
+                            if (behavior == JigsawPattern.PlacementBehaviour.RIGID)
+                            {
+                                pieces.add(villagePiece);
+                            }
+
+                            for (JigsawJunction junction : villagePiece.getJunctions())
+                            {
+                                final int sourceX = junction.getSourceX();
+                                final int sourceZ = junction.getSourceZ();
+                                if (sourceX > blockX - 12 && sourceZ > blockZ - 12 && sourceX < blockX + 15 + 12 && sourceZ < blockZ + 15 + 12)
+                                {
+                                    junctions.add(junction);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            pieces.add(piece);
+                        }
+                    }
+                }
+
+            });
+        }
+    }
 
     public static double getContribution(int x, int y, int z)
     {
