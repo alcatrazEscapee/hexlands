@@ -1,80 +1,129 @@
 buildscript {
     repositories {
-        jcenter()
-        maven { url = "http://files.minecraftforge.net/maven" }
+        maven {
+            url = 'https://maven.minecraftforge.net'
+        }
+        /* maven {
+            url "https://repo.spongepowered.org/repository/maven-public/"
+            content { includeGroup "org.spongepowered" }
+        } */
+        mavenCentral()
     }
     dependencies {
-        classpath 'net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT'
+        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '4.1.+', changing: true
+        // classpath 'org.spongepowered:mixingradle:0.7-SNAPSHOT'
     }
 }
-apply plugin: 'net.minecraftforge.gradle.forge'
-//Only edit below this line, the above code adds and enables the necessary things for Forge to be setup.
 
+plugins {
+    id 'net.minecrell.licenser' version '0.4.1'
+    id 'idea'
+}
 
-version = "1.9.0"
-group = "fluke.hexlands" // http://maven.apache.org/guides/mini/guide-naming-conventions.html
-archivesBaseName = "hexlands"
+apply plugin: 'net.minecraftforge.gradle'
+// apply plugin: 'org.spongepowered.mixin'
 
-sourceCompatibility = targetCompatibility = '1.8' // Need this here so eclipse task generates correctly.
-compileJava {
-    sourceCompatibility = targetCompatibility = '1.8'
+def localProperties = new File('./dev.gradle')
+localProperties.createNewFile()
+
+apply from: 'dev.gradle'
+
+// These properties can all be customized from dev.gradle
+def mappingsChannel = project.hasProperty('mappings_channel') ? mappings_channel : 'official'
+def mappingsVersion = project.hasProperty('mappings_version') ? mappings_version : minecraft_version
+
+println "Using mappings: " + mappingsChannel + " / " + mappingsVersion
+
+group = "com.alcatrazescapee.hexlands"
+archivesBaseName = "HexLands-Forge-${minecraft_version}"
+
+// Use version from environment variable, if set
+def envVersion = System.getenv('VERSION')
+version = envVersion == null ? 'indev' : envVersion
+
+sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = JavaVersion.VERSION_1_8 // Need this here so eclipse task generates correctly.
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+	maven {
+		// Blame
+		url "https://nexus.resourcefulbees.com/repository/maven-public/"
+	}
 }
 
 minecraft {
-    version = "1.12.2-14.23.5.2814"
-    runDir = "run"
-    
-    // the mappings can be changed at any time, and must be in the following format.
-    // snapshot_YYYYMMDD   snapshot are built nightly.
-    // stable_#            stables are built at the discretion of the MCP team.
-    // Use non-default mappings at your own risk. they may not always work.
-    // simply re-run your setup task after changing the mappings to update your workspace.
-    mappings = "snapshot_20180810"
-    // makeObfSourceJar = false // an Srg named sources jar is made by default. uncomment this to disable.
+    mappings channel: mappingsChannel, version: mappingsVersion
+    // accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
+
+    runs {
+        client {
+            workingDirectory project.file('run')
+            // args '-mixin.config=' + mod_id + '.mixins.json'
+            property 'forge.logging.console.level', 'debug'
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
+            jvmArg '-ea'
+
+            mods {
+                hexlands {
+                    source sourceSets.main
+                }
+            }
+        }
+
+        server {
+            workingDirectory project.file('run')
+            args '--nogui' // '-mixin.config=' + mod_id + '.mixins.json'
+            property 'forge.logging.console.level', 'debug'
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
+            jvmArg '-ea'
+
+            mods {
+                hexlands {
+                    source sourceSets.main
+                }
+            }
+        }
+    }
 }
 
 dependencies {
-    // you may put jars on which you depend on in ./libs
-    // or you may define them like so..
-    //compile "some.group:artifact:version:classifier"
-    //compile "some.group:artifact:version"
-      
-    // real examples
-    //compile 'com.mod-buildcraft:buildcraft:6.0.8:dev'  // adds buildcraft to the dev env
-    //compile 'com.googlecode.efficient-java-matrix-library:ejml:0.24' // adds ejml to the dev env
+    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
 
-    // the 'provided' configuration is for optional dependencies that exist at compile-time but might not at runtime.
-    //provided 'com.mod-buildcraft:buildcraft:6.0.8:dev'
+    runtimeOnly fg.deobf("com.telepathicgrunt:Blame:${blame_version}")
 
-    // the deobf configurations:  'deobfCompile' and 'deobfProvided' are the same as the normal compile and provided,
-    // except that these dependencies get remapped to your current MCP mappings
-    //deobfCompile 'com.mod-buildcraft:buildcraft:6.0.8:dev'
-    //deobfProvided 'com.mod-buildcraft:buildcraft:6.0.8:dev'
+    testImplementation 'org.quicktheories:quicktheories:0.26'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.3.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.3.1'
 
-    // for more info...
-    // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
-    // http://www.gradle.org/docs/current/userguide/dependency_management.html
-    
-    deobfProvided ("com.github.glitchfiend.biomesoplenty:BiomesOPlenty:1.12.2-7.0.1.2391:deobf")
-
+    /* if (System.getProperty("idea.sync.active") != "true") {
+        annotationProcessor "org.spongepowered:mixin:${mixin_version}:processor"
+    } */
 }
 
-processResources {
-    // this will ensure that this task is redone when the versions change.
-    inputs.property "version", project.version
-    inputs.property "mcversion", project.minecraft.version
-
-    // replace stuff in mcmod.info, nothing else
-    from(sourceSets.main.resources.srcDirs) {
-        include 'mcmod.info'
-                
-        // replace version and mcversion
-        expand 'version':project.version, 'mcversion':project.minecraft.version
-    }
-        
-    // copy everything else except the mcmod.info
-    from(sourceSets.main.resources.srcDirs) {
-        exclude 'mcmod.info'
-    }
-
+test {
+    useJUnitPlatform()
 }
+
+// Automatically apply a license header when running checkLicense / updateLicense
+license {
+    header = project.file('HEADER.txt')
+
+    include '**/*.java'
+}
+
+// Puts the mod version into the jar for mods.toml to read from
+jar {
+    manifest {
+        attributes ([
+                "Implementation-Version": "${project.version}"
+                // "MixinConfigs": "${mod_id}.mixins.json"
+        ])
+    }
+}
+
+/* mixin {
+    add sourceSets.main, "${mod_id}.refmap.json"
+} */
