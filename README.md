@@ -1,6 +1,4 @@
-# Hex Lands
-
-![Hex Lands Overworld](./img/hex_overworld.png)
+![Hex Lands](./img/splash.png)
 
 This mod is an updated and rewritten version of the original [Hex Lands](https://www.curseforge.com/minecraft/mc-mods/hex-lands) mod by superfluke, et. al. It has been re-done completely from scratch in Minecraft 1.16.5.
 
