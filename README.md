@@ -86,7 +86,7 @@ setHexLandsWorldTypeAsDefault = true
 
 ### Gallery
 
-![More Overworld Hexes](./img/hex_overworld_2.png)
+![Overworld Hexes](./img/hex_overworld.png)
 ![Nether Hexes](./img/hex_nether.png)
 
 With [Oh The Biomes You'll Bo](https://www.curseforge.com/minecraft/mc-mods/oh-the-biomes-youll-go):
