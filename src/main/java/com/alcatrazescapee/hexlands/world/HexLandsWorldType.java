@@ -5,7 +5,9 @@
 
 package com.alcatrazescapee.hexlands.world;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 import org.apache.logging.log4j.LogManager;
@@ -27,6 +29,7 @@ import net.minecraft.world.gen.settings.DimensionGeneratorSettings;
 import net.minecraftforge.common.ForgeConfig;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.common.world.ForgeWorldType;
+import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.RegistryObject;
 import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
 import net.minecraftforge.registries.DeferredRegister;
@@ -75,9 +78,7 @@ public class HexLandsWorldType
         @Override
         public ChunkGenerator createChunkGenerator(Registry<Biome> biomeRegistry, Registry<DimensionSettings> dimensionSettingsRegistry, long seed)
         {
-            final BiomeProvider overworld = new OverworldBiomeProvider(seed, false, false, biomeRegistry);
-            final HexBiomeSource hex = new HexBiomeSource(overworld, biomeRegistry, HexSettings.OVERWORLD, seed);
-            return new HexChunkGenerator(hex, () -> dimensionSettingsRegistry.getOrThrow(DimensionSettings.OVERWORLD), seed);
+            return createOverworldChunkGenerator(biomeRegistry, dimensionSettingsRegistry, seed);
         }
 
         @Override
@@ -103,33 +104,68 @@ public class HexLandsWorldType
             return new DimensionGeneratorSettings(seed, generateStructures, bonusChest, DimensionGeneratorSettings.withOverworld(dimensionTypeRegistry, dimensions, overworld));
         }
 
+        private ChunkGenerator createOverworldChunkGenerator(Registry<Biome> biomeRegistry, Registry<DimensionSettings> dimensionSettingsRegistry, long seed)
+        {
+            final BiomeProvider overworld =
+                getModdedBiomeSource(HexLandsConfig.COMMON.useBoPOverworld.get(), "biomesoplenty", "biomesoplenty.common.world.BOPBiomeProvider", new Class<?>[] {long.class, Registry.class}, seed, biomeRegistry)
+                    .orElseGet(() -> new OverworldBiomeProvider(seed, false, false, biomeRegistry));
+            final HexBiomeSource hex = new HexBiomeSource(overworld, biomeRegistry, HexSettings.OVERWORLD, seed);
+            return new HexChunkGenerator(hex, () -> dimensionSettingsRegistry.getOrThrow(DimensionSettings.OVERWORLD), seed);
+        }
+
         private ChunkGenerator createNetherChunkGenerator(Registry<Biome> biomeRegistry, Registry<DimensionSettings> dimensionSettingsRegistry, long seed)
         {
-            BiomeProvider nether;
-            try
-            {
-                final ChunkGenerator generator = (ChunkGenerator) DEFAULT_NETHER_GENERATOR.invoke(null, biomeRegistry, dimensionSettingsRegistry, seed);
-                nether = generator.getBiomeSource();
-            }
-            catch (Exception e)
-            {
-                LOGGER.warn("Something went wrong, using vanilla nether generator: ", e);
-                nether = NetherBiomeProvider.Preset.NETHER.biomeSource(biomeRegistry, seed);
-            }
+            final BiomeProvider nether =
+                getModdedBiomeSource(HexLandsConfig.COMMON.useBoPNether.get(), "biomesoplenty", "biomesoplenty.common.world.BOPNetherBiomeProvider", new Class<?>[] {long.class, Registry.class}, seed, biomeRegistry)
+                    .orElseGet(() -> getDefaultChunkGenerator(DEFAULT_NETHER_GENERATOR, biomeRegistry, dimensionSettingsRegistry, seed).map(ChunkGenerator::getBiomeSource)
+                        .orElseGet(() -> NetherBiomeProvider.Preset.NETHER.biomeSource(biomeRegistry, seed)));
             final HexBiomeSource hex = new HexBiomeSource(nether, biomeRegistry, HexSettings.NETHER, seed);
             return new HexChunkGenerator(hex, () -> dimensionSettingsRegistry.getOrThrow(DimensionSettings.NETHER), seed);
         }
 
         private ChunkGenerator createEndChunkGenerator(Registry<Biome> biomeRegistry, Registry<DimensionSettings> dimensionSettingsRegistry, long seed)
         {
+            return getDefaultChunkGenerator(DEFAULT_END_GENERATOR, biomeRegistry, dimensionSettingsRegistry, seed)
+                .orElseGet(() -> new NoiseChunkGenerator(new EndBiomeProvider(biomeRegistry, seed), seed, () -> dimensionSettingsRegistry.getOrThrow(DimensionSettings.END)));
+        }
+
+        private Optional<ChunkGenerator> getDefaultChunkGenerator(Method defaultMethod, Object... params)
+        {
             try
             {
-                return (ChunkGenerator) DEFAULT_END_GENERATOR.invoke(null, biomeRegistry, dimensionSettingsRegistry, seed);
+                return Optional.of((ChunkGenerator) defaultMethod.invoke(null, params));
             }
             catch (Exception e)
             {
-                LOGGER.warn("Something went wrong, using vanilla end generator: ", e);
-                return new NoiseChunkGenerator(new EndBiomeProvider(biomeRegistry, seed), seed, () -> dimensionSettingsRegistry.getOrThrow(DimensionSettings.END));
+                LOGGER.warn("Failed to get default chunk generator: {}", e.getMessage());
+                LOGGER.debug("Exception", e);
+                return Optional.empty();
+            }
+        }
+
+        private Optional<BiomeProvider> getModdedBiomeSource(boolean configOption, String predicateModId, String className, Class<?>[] constructorTypes, Object... constructorParams)
+        {
+            if (!configOption)
+            {
+                return Optional.empty();
+            }
+            if (!ModList.get().isLoaded(predicateModId))
+            {
+                LOGGER.warn("Mod {} is not loaded, skipping integration.", predicateModId);
+                return Optional.empty();
+            }
+            try
+            {
+                final Class<?> cls = Class.forName(className);
+                final Constructor<?> ctor = cls.getConstructor(constructorTypes);
+                final BiomeProvider biomeSource = (BiomeProvider) ctor.newInstance(constructorParams);
+                return Optional.of(biomeSource);
+            }
+            catch (Exception e)
+            {
+                LOGGER.warn("Unable to find biome source from mod {}: {}", predicateModId, e.getMessage());
+                LOGGER.debug("Exception", e);
+                return Optional.empty();
             }
         }
     }

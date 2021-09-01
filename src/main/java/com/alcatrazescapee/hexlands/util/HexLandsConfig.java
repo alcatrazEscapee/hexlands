@@ -28,6 +28,8 @@ public class HexLandsConfig
     public static class Common
     {
         public final ForgeConfigSpec.BooleanValue setHexLandsWorldTypeAsDefault;
+        public final ForgeConfigSpec.BooleanValue useBoPOverworld;
+        public final ForgeConfigSpec.BooleanValue useBoPNether;
 
         private Common(ForgeConfigSpec.Builder builder)
         {
@@ -35,6 +37,14 @@ public class HexLandsConfig
                 " Should HexLands try and set the 'hexlands:hexlands' world type as the default world type?",
                 " This will only replace the option in the respective Forge config file, *only* if it is set to 'default'"
             ).define("setHexLandsWorldTypeAsDefault", true);
+
+            useBoPOverworld = builder.comment(
+                " Should HexLands try and use the BoP (Biomes O Plenty) biome source for the overworld?"
+            ).define("useBoPOverworld", true);
+
+            useBoPNether = builder.comment(
+                " Should HexLands try and use the BoP (Biomes O Plenty) biome source for the nether?"
+            ).define("useBoPNether", true);
         }
     }
 }

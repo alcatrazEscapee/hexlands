@@ -94,4 +94,8 @@ With [Oh The Biomes You'll Bo](https://www.curseforge.com/minecraft/mc-mods/oh-t
 ![BYG Overworld Hexes](./img/hex_overworld_byg.png)
 ![BYG Nether Hexes](./img/hex_nether_byg.png)
 
+With [Biomes O Plenty](https://www.curseforge.com/minecraft/mc-mods/biomes-o-plenty)
+
+![Biomes O Plenty Overworld Hexes](./img/hex_overworld_bop.png)
+
 
