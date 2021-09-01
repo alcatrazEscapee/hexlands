@@ -24,7 +24,6 @@ import net.minecraft.world.biome.provider.NetherBiomeProvider;
 import net.minecraft.world.biome.provider.OverworldBiomeProvider;
 import net.minecraft.world.gen.ChunkGenerator;
 import net.minecraft.world.gen.DimensionSettings;
-import net.minecraft.world.gen.NoiseChunkGenerator;
 import net.minecraft.world.gen.settings.DimensionGeneratorSettings;
 import net.minecraftforge.common.ForgeConfig;
 import net.minecraftforge.common.ForgeConfigSpec;
@@ -125,8 +124,11 @@ public class HexLandsWorldType
 
         private ChunkGenerator createEndChunkGenerator(Registry<Biome> biomeRegistry, Registry<DimensionSettings> dimensionSettingsRegistry, long seed)
         {
-            return getDefaultChunkGenerator(DEFAULT_END_GENERATOR, biomeRegistry, dimensionSettingsRegistry, seed)
-                .orElseGet(() -> new NoiseChunkGenerator(new EndBiomeProvider(biomeRegistry, seed), seed, () -> dimensionSettingsRegistry.getOrThrow(DimensionSettings.END)));
+            final BiomeProvider end =
+                getDefaultChunkGenerator(DEFAULT_END_GENERATOR, biomeRegistry, dimensionSettingsRegistry, seed).map(ChunkGenerator::getBiomeSource)
+                    .orElseGet(() -> new EndBiomeProvider(biomeRegistry, seed));
+            final HexBiomeSource hex = new HexBiomeSource(end, biomeRegistry, HexSettings.END, seed);
+            return new HexChunkGenerator(hex, () -> dimensionSettingsRegistry.getOrThrow(DimensionSettings.END), seed);
         }
 
         private Optional<ChunkGenerator> getDefaultChunkGenerator(Method defaultMethod, Object... params)

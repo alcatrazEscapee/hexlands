@@ -426,7 +426,11 @@ public class HexChunkGenerator extends ChunkGenerator
 
     protected double applyHexBorderNoiseModifier(Hex hex, Biome biome, Random random, int y)
     {
-        // Really really hacky way to get some sensible variety between hex border heights.
+        if (hexSettings.noBorder())
+        {
+            return -1;
+        }
+
         random.setSeed(HashCommon.murmurHash3(hex.hashCode()));
         if (hexSettings.windowedBorder())
         {

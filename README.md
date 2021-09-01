@@ -11,7 +11,7 @@ This mod is an updated and rewritten version of the original [Hex Lands](https:/
 
 ### Data Packs
 
-All of Hex Lands's world generation is exposed to datapacks. If you're not familiar with world gen datapacks and custom dimensions, the following articles are useful to get up to speed:
+All of Hex Lands's world generation can be used by datapacks. If you're not familiar with world gen datapacks and custom dimensions, the following articles are useful to get up to speed:
 
 - [Custom World Generation](https://minecraft.fandom.com/wiki/Custom_world_generation)
 - [Custom Dimensions](https://minecraft.fandom.com/wiki/Custom_dimension)
@@ -33,6 +33,7 @@ In order to change a dimension to use hex based generation, you need to override
     - `border_state` is a block state representing the border state. It must be specified in a block state format, with a `Name` and `Properties` keys. The default in the overworld is `minecraft:stone_bricks`, the default in the nether is `minecraft:nether_bricks`.
     - `border_extends_to_bedrock` is a boolean. If true, the border will extend all the way down to bedrock, rather than only covering the surface material. By default, this is `false` in the overworld and `true` in the nether.
     - `windowed_border` is a boolean. If true, the border will be a "window" from both the top and the bottom of the world, otherwise, it will approximate the height of the biome. By default, this is `false` in the overworld and `true` in the nether.
+    - `no_border` is a boolean. If true, there will be no border, and the border space will completely consist of air.
 
 #### Example
 
@@ -41,10 +42,16 @@ In order to change a dimension to use hex based generation, you need to override
   "type": "minecraft:overworld", // Dimension Type
   "generator": {
     "type": "hexlands:hexlands", // Hex Lands generator
+    "seed": 1234,
     "settings": "minecraft:overworld", // Noise settings
     "biome_source": {
       "type": "hexlands:hexlands", // Hex Lands biome source
-      "biome_source": "minecraft:vanilla_layered", // The actual biome source used
+      "seed": 1234,
+      "biome_source": {
+        "type": "minecraft:vanilla_layered", // The actual biome source used
+        "seed": 1234,
+        "large_biomes": false
+      },
       "biome_scale": 8,
       "hex_size": 40,
       "hex_border_threshold": 0.92,
@@ -53,7 +60,8 @@ In order to change a dimension to use hex based generation, you need to override
         "Properties": {}
       },
       "border_extends_to_bedrock": false,
-      "windowed_border": false
+      "windowed_border": false,
+      "no_border": false
     }
   }
 }
@@ -93,6 +101,7 @@ With [Oh The Biomes You'll Bo](https://www.curseforge.com/minecraft/mc-mods/oh-t
 
 ![BYG Overworld Hexes](./img/hex_overworld_byg.png)
 ![BYG Nether Hexes](./img/hex_nether_byg.png)
+![BYG End Hexes](./img/hex_end_byg.png)
 
 With [Biomes O Plenty](https://www.curseforge.com/minecraft/mc-mods/biomes-o-plenty)
 
