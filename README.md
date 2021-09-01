@@ -9,6 +9,28 @@ This mod is an updated and rewritten version of the original [Hex Lands](https:/
 - Automatic compatibility with mods that add biomes to the overworld or other world generation.
 - Many options for world customization via data packs.
 
+### World Types
+
+Hex Lands adds two world types. By default, it will overwrite the Forge config option for world types and set it to `hexlands:hexlands`. This can be disabled in the `hexlands-common.toml` config.
+
+- `hexlands:hexlands` This is the default Hex Lands world type. It will use hex based terrain generation in the overworld and nether.
+- `hexlands:hexlands_overworld_only` This will only use hex based terrain generation in the overworld.
+
+To set the world type, consult the option in the `forge-common.toml` config file:
+
+```toml
+# Defines a default world type to use. The vanilla default world type is represented by 'default'.
+# The modded world types are registry names which should include the registry namespace, such as 'examplemod:example_world_type'.
+defaultWorldType = "hexlands:hexlands"
+```
+
+### Config
+
+Most of Hex Land's configuration is done through datapacks. That said, it has two notable common configuration options worth mentioning:
+
+- An option to disable HexLands from trying to overwrite Forge's config option for the default world type
+- An option to disable (per dimension), automatic Biomes O Plenty compatibility.
+
 ### Data Packs
 
 All of Hex Lands's world generation can be used by datapacks. If you're not familiar with world gen datapacks and custom dimensions, the following articles are useful to get up to speed:
@@ -65,31 +87,6 @@ In order to change a dimension to use hex based generation, you need to override
     }
   }
 }
-```
-
-### World Types
-
-Hex Lands adds two world types. By default, it will overwrite the Forge config option for world types and set it to `hexlands:hexlands`. This can be disabled in the `hexlands-common.toml` config.
-
-- `hexlands:hexlands` This is the default Hex Lands world type. It will use hex based terrain generation in the overworld and nether.
-- `hexlands:hexlands_overworld_only` This will only use hex based terrain generation in the overworld.
-
-To set the world type, consult the option in the `forge-common.toml` config file:
-
-```toml
-# Defines a default world type to use. The vanilla default world type is represented by 'default'.
-# The modded world types are registry names which should include the registry namespace, such as 'examplemod:example_world_type'.
-defaultWorldType = "hexlands:hexlands"
-```
-
-### Config
-
-Hex Lands has one common config option:
-
-```toml
-# Should HexLands try and set the 'hexlands:hexlands' world type as the default world type?
-# This will only replace the option in the respective Forge config file, *only* if it is set to 'default'
-setHexLandsWorldTypeAsDefault = true
 ```
 
 ### Gallery
