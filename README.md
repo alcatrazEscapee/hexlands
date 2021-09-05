@@ -43,11 +43,10 @@ In order to change a dimension to use hex based generation, you need to override
 **Note**: Anywhere below where the term "default value" is used does not mean the field is not required! It means that is the value used by the Hex Land's generation presets.
 
 - `type` is a string identifying what chunk generator to use. Must be `hexlands:hexlands`.
-- `seed` is a `long`. It is the seed of the world. (This will be overriden by a seed in the world creation screen, or server.properties if not present.)
+- `seed` is a `long`. It is the seed of the world.
 - `settings` is a [Noise Settings](https://minecraft.fandom.com/wiki/Custom_world_generation#Noise_settings) used by the dimension. The default value is `"minecraft:overworld"`.
 - `biome_source` is an object representing the biomes in the world. It must be a Hex Lands biome source, with the following fields:
     - `type` is a string identifying what biome source to use. Must be `hexlands:hexlands`.
-    - `seed` is a long. It is the seed used by the biome source. (This will be overriden by a seed in the world creation screen, or server.properties if not present.)
     - `biome_source` is the biome source used by the hexlands biomes. It can be any biome source in vanilla. The default one used is `minecraft:vanilla_layered`. This will include modded biomes if they add biomes to the normal overworld.
     - `biome_scale` is a double between `0.01` and `1000`. It represents the scale of the biomes in hexes. Lower values will make biomes closer together, larger values will create more adjacent hexes of the same biome. The default in the overworld is `8`, the default in the nether is `4`.
     - `hex_size` is a double between `1` and `1000` representing the size of a single hex. The default is `40`.

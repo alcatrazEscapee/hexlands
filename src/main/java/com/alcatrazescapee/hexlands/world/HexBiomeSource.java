@@ -21,13 +21,12 @@ public class HexBiomeSource extends BiomeProvider
         BiomeProvider.CODEC.fieldOf("biome_source").forGetter(c -> c.parent),
         RegistryLookupCodec.create(Registry.BIOME_REGISTRY).forGetter(c -> c.biomeRegistry),
         HexSettings.CODEC.forGetter(c -> c.settings),
-        Codec.LONG.fieldOf("seed").forGetter(c -> c.seed)
+        Codec.LONG.optionalFieldOf("seed", 0L).forGetter(c -> 0L) // For compat with older data packs
     ).apply(instance, HexBiomeSource::new));
 
     private final BiomeProvider parent;
     private final Registry<Biome> biomeRegistry;
     private final HexSettings settings;
-    private final long seed;
 
     public HexBiomeSource(BiomeProvider parent, Registry<Biome> biomeRegistry, HexSettings settings, long seed)
     {
@@ -36,7 +35,6 @@ public class HexBiomeSource extends BiomeProvider
         this.parent = parent;
         this.biomeRegistry = biomeRegistry;
         this.settings = settings;
-        this.seed = seed;
     }
 
     @Override
