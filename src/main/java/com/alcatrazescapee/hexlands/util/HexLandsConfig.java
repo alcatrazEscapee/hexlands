@@ -28,6 +28,7 @@ public class HexLandsConfig
     public static class Common
     {
         public final ForgeConfigSpec.BooleanValue setHexLandsWorldTypeAsDefault;
+        public final ForgeConfigSpec.BooleanValue preserveMainEndIsland;
         public final ForgeConfigSpec.BooleanValue useBoPOverworld;
         public final ForgeConfigSpec.BooleanValue useBoPNether;
 
@@ -37,6 +38,10 @@ public class HexLandsConfig
                 " Should HexLands try and set the 'hexlands:hexlands' world type as the default world type?",
                 " This will only replace the option in the respective Forge config file, *only* if it is set to 'default'"
             ).define("setHexLandsWorldTypeAsDefault", true);
+
+            preserveMainEndIsland = builder.comment(
+                " Should HexLands try and preserve the main end island, including end pillars (spikes), but resulting in less or no hexagons near the end origin."
+            ).define("preserveMainEndIsland", true);
 
             useBoPOverworld = builder.comment(
                 " Should HexLands try and use the BoP (Biomes O Plenty) biome source for the overworld?"

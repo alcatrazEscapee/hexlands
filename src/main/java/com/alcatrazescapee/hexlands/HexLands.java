@@ -17,6 +17,7 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import com.alcatrazescapee.hexlands.util.HexLandsConfig;
 import com.alcatrazescapee.hexlands.world.HexBiomeSource;
 import com.alcatrazescapee.hexlands.world.HexChunkGenerator;
+import com.alcatrazescapee.hexlands.world.HexEndBiomeSource;
 import com.alcatrazescapee.hexlands.world.HexLandsWorldType;
 
 @Mod(HexLands.MOD_ID)
@@ -42,6 +43,7 @@ public class HexLands
             HexLandsWorldType.setDefault();
             Registry.register(Registry.CHUNK_GENERATOR, new ResourceLocation(MOD_ID, "hexlands"), HexChunkGenerator.CODEC);
             Registry.register(Registry.BIOME_SOURCE, new ResourceLocation(MOD_ID, "hexlands"), HexBiomeSource.CODEC);
+            Registry.register(Registry.BIOME_SOURCE, new ResourceLocation(MOD_ID, "end_hexlands"), HexEndBiomeSource.CODEC);
         });
     }
 }

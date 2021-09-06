@@ -108,7 +108,7 @@ public class HexLandsWorldType
             final BiomeProvider overworld =
                 getModdedBiomeSource(HexLandsConfig.COMMON.useBoPOverworld.get(), "biomesoplenty", "biomesoplenty.common.world.BOPBiomeProvider", new Class<?>[] {long.class, Registry.class}, seed, biomeRegistry)
                     .orElseGet(() -> new OverworldBiomeProvider(seed, false, false, biomeRegistry));
-            final HexBiomeSource hex = new HexBiomeSource(overworld, biomeRegistry, HexSettings.OVERWORLD, seed);
+            final HexBiomeSource hex = new HexBiomeSource(overworld, biomeRegistry, HexSettings.OVERWORLD);
             return new HexChunkGenerator(hex, () -> dimensionSettingsRegistry.getOrThrow(DimensionSettings.OVERWORLD), seed);
         }
 
@@ -118,7 +118,7 @@ public class HexLandsWorldType
                 getModdedBiomeSource(HexLandsConfig.COMMON.useBoPNether.get(), "biomesoplenty", "biomesoplenty.common.world.BOPNetherBiomeProvider", new Class<?>[] {long.class, Registry.class}, seed, biomeRegistry)
                     .orElseGet(() -> getDefaultChunkGenerator(DEFAULT_NETHER_GENERATOR, biomeRegistry, dimensionSettingsRegistry, seed).map(ChunkGenerator::getBiomeSource)
                         .orElseGet(() -> NetherBiomeProvider.Preset.NETHER.biomeSource(biomeRegistry, seed)));
-            final HexBiomeSource hex = new HexBiomeSource(nether, biomeRegistry, HexSettings.NETHER, seed);
+            final HexBiomeSource hex = new HexBiomeSource(nether, biomeRegistry, HexSettings.NETHER);
             return new HexChunkGenerator(hex, () -> dimensionSettingsRegistry.getOrThrow(DimensionSettings.NETHER), seed);
         }
 
@@ -127,7 +127,7 @@ public class HexLandsWorldType
             final BiomeProvider end =
                 getDefaultChunkGenerator(DEFAULT_END_GENERATOR, biomeRegistry, dimensionSettingsRegistry, seed).map(ChunkGenerator::getBiomeSource)
                     .orElseGet(() -> new EndBiomeProvider(biomeRegistry, seed));
-            final HexBiomeSource hex = new HexBiomeSource(end, biomeRegistry, HexSettings.END, seed);
+            final HexBiomeSource hex = HexLandsConfig.COMMON.preserveMainEndIsland.get() ? new HexEndBiomeSource(end, biomeRegistry, HexSettings.END) : new HexBiomeSource(end, biomeRegistry, HexSettings.END);
             return new HexChunkGenerator(hex, () -> dimensionSettingsRegistry.getOrThrow(DimensionSettings.END), seed);
         }
 

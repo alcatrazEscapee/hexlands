@@ -28,6 +28,7 @@ import net.minecraft.world.IWorld;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.MobSpawnInfo;
 import net.minecraft.world.biome.provider.BiomeProvider;
+import net.minecraft.world.biome.provider.EndBiomeProvider;
 import net.minecraft.world.chunk.ChunkPrimer;
 import net.minecraft.world.chunk.ChunkSection;
 import net.minecraft.world.chunk.IChunk;
@@ -43,6 +44,7 @@ import net.minecraft.world.spawner.WorldEntitySpawner;
 import net.minecraftforge.common.world.StructureSpawnManager;
 
 import com.alcatrazescapee.hexlands.util.Hex;
+import com.alcatrazescapee.hexlands.util.HexLandsConfig;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -90,6 +92,7 @@ public class HexChunkGenerator extends ChunkGenerator
     private final OctavesNoiseGenerator mainPerlinNoise;
     private final INoiseGenerator surfaceNoise;
     private final OctavesNoiseGenerator depthNoise;
+    @Nullable private final SimplexNoiseGenerator islandNoise;
 
     private DimensionSettings cachedSettings;
 
@@ -124,6 +127,8 @@ public class HexChunkGenerator extends ChunkGenerator
         this.mainPerlinNoise = new OctavesNoiseGenerator(random, IntStream.rangeClosed(-7, 0));
         this.surfaceNoise = noiseSettings.useSimplexSurfaceNoise() ? new PerlinNoiseGenerator(random, IntStream.rangeClosed(-3, 0)) : new OctavesNoiseGenerator(random, IntStream.rangeClosed(-3, 0));
         this.depthNoise = new OctavesNoiseGenerator(random, IntStream.rangeClosed(-15, 0));
+
+        this.islandNoise = HexLandsConfig.COMMON.preserveMainEndIsland.get() && noiseSettings.islandNoiseOverride() ? new SimplexNoiseGenerator(random) : null;
     }
 
     @Override
@@ -483,7 +488,6 @@ public class HexChunkGenerator extends ChunkGenerator
     protected void fillNoiseColumn(double[] noiseColumn, int cellX, int cellZ)
     {
         final NoiseSettings noiseSettings = settings().noiseSettings();
-        final Biome hexBiome = hexBiomeSource.getNoiseBiome(cellX, getSeaLevel(), cellZ);
 
         final double xzScale = 684.412D * noiseSettings.noiseSamplingSettings().xzScale();
         final double yScale = 684.412D * noiseSettings.noiseSamplingSettings().yScale();
@@ -499,16 +503,26 @@ public class HexChunkGenerator extends ChunkGenerator
         final double densityFactor = noiseSettings.densityFactor();
         final double densityOffset = noiseSettings.densityOffset();
 
-        double scale = hexBiome.getScale();
-        double depth = hexBiome.getDepth();
-        if (noiseSettings.isAmplified() && depth > 0.0F)
+        double depth, scale;
+        if (islandNoise != null)
         {
-            depth = 1.0F + depth * 2.0F;
-            scale = 1.0F + scale * 4.0F;
+            depth = EndBiomeProvider.getHeightValue(islandNoise, cellX, cellZ) - 8.0F;
+            scale = depth > 0.0D ? 0.25D : 1.0D;
         }
+        else
+        {
+            final Biome hexBiome = hexBiomeSource.getNoiseBiome(cellX, getSeaLevel(), cellZ);
+            depth = hexBiome.getDepth();
+            scale = hexBiome.getScale();
+            if (noiseSettings.isAmplified() && depth > 0.0F)
+            {
+                depth = 1.0F + depth * 2.0F;
+                scale = 1.0F + scale * 4.0F;
+            }
 
-        depth = (depth * 0.5F - 0.125F) * 0.265625D;
-        scale = 96.0D / (scale * 0.9F + 0.1F);
+            depth = (depth * 0.5F - 0.125F) * 0.265625D;
+            scale = 96.0D / (scale * 0.9F + 0.1F);
+        }
 
         for (int cellY = 0; cellY <= chunkCountY; ++cellY)
         {

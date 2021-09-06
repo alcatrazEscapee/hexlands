@@ -20,15 +20,14 @@ public class HexBiomeSource extends BiomeProvider
     public static final Codec<HexBiomeSource> CODEC = RecordCodecBuilder.create(instance -> instance.group(
         BiomeProvider.CODEC.fieldOf("biome_source").forGetter(c -> c.parent),
         RegistryLookupCodec.create(Registry.BIOME_REGISTRY).forGetter(c -> c.biomeRegistry),
-        HexSettings.CODEC.forGetter(c -> c.settings),
-        Codec.LONG.optionalFieldOf("seed", 0L).forGetter(c -> 0L) // For compat with older data packs
+        HexSettings.CODEC.forGetter(c -> c.settings)
     ).apply(instance, HexBiomeSource::new));
 
-    private final BiomeProvider parent;
-    private final Registry<Biome> biomeRegistry;
-    private final HexSettings settings;
+    protected final BiomeProvider parent;
+    protected final Registry<Biome> biomeRegistry;
+    protected final HexSettings settings;
 
-    public HexBiomeSource(BiomeProvider parent, Registry<Biome> biomeRegistry, HexSettings settings, long seed)
+    public HexBiomeSource(BiomeProvider parent, Registry<Biome> biomeRegistry, HexSettings settings)
     {
         super(parent.possibleBiomes());
 
@@ -40,7 +39,7 @@ public class HexBiomeSource extends BiomeProvider
     @Override
     public Biome getNoiseBiome(int x, int y, int z)
     {
-        return getHexBiome(x << 2, z << 2);
+        return getHexBiome(x << 2, y, z << 2);
     }
 
     @Override
@@ -52,7 +51,7 @@ public class HexBiomeSource extends BiomeProvider
     @Override
     public HexBiomeSource withSeed(long seed)
     {
-        return new HexBiomeSource(parent.withSeed(seed), biomeRegistry, settings, seed);
+        return new HexBiomeSource(parent.withSeed(seed), biomeRegistry, settings);
     }
 
     public HexSettings hexSettings()
@@ -60,18 +59,23 @@ public class HexBiomeSource extends BiomeProvider
         return settings;
     }
 
-    public Biome getHexBiome(int x, int z)
+    public Biome getHexBiome(int x, int y, int z)
     {
         final double scale = settings.biomeScale();
         final double size = settings.hexSize() * scale;
         final Hex hex = Hex.blockToHex(x * scale, z * scale, size);
         final BlockPos pos = hex.center();
-        return parent.getNoiseBiome(pos.getX(), 0, pos.getZ());
+        return getParentNoiseBiome(pos.getX(), y, pos.getZ());
     }
 
     public Biome getHexBiome(Hex hex)
     {
         final BlockPos pos = hex.center();
-        return parent.getNoiseBiome(pos.getX(), 0, pos.getZ());
+        return getParentNoiseBiome(pos.getX(), 0, pos.getZ());
+    }
+
+    protected Biome getParentNoiseBiome(int x, int y, int z)
+    {
+        return parent.getNoiseBiome(x, y, z);
     }
 }

@@ -24,14 +24,9 @@ To set the world type, consult the option in the `forge-common.toml` config file
 defaultWorldType = "hexlands:hexlands"
 ```
 
-### Config
+Alternatively, these two world types can be used in the `level-type` field of `server.properties`.
 
-Most of Hex Land's configuration is done through datapacks. That said, it has two notable common configuration options worth mentioning:
-
-- An option to disable HexLands from trying to overwrite Forge's config option for the default world type
-- An option to disable (per dimension), automatic Biomes O Plenty compatibility.
-
-### Data Packs
+### Configuration (Data Packs)
 
 All of Hex Lands's world generation can be used by datapacks. If you're not familiar with world gen datapacks and custom dimensions, the following articles are useful to get up to speed:
 
@@ -42,7 +37,7 @@ In order to change a dimension to use hex based generation, you need to override
 
 **Note**: Anywhere below where the term "default value" is used does not mean the field is not required! It means that is the value used by the Hex Land's generation presets.
 
-- `type` is a string identifying what chunk generator to use. Must be `hexlands:hexlands`.
+- `type` is a string identifying what chunk generator to use. Must be a HexLands compatible biome source (Either `hexlands:hexlands` or `hexlands:end_hexlands`).
 - `seed` is a `long`. It is the seed of the world.
 - `settings` is a [Noise Settings](https://minecraft.fandom.com/wiki/Custom_world_generation#Noise_settings) used by the dimension. The default value is `"minecraft:overworld"`.
 - `biome_source` is an object representing the biomes in the world. It must be a Hex Lands biome source, with the following fields:
@@ -87,6 +82,15 @@ In order to change a dimension to use hex based generation, you need to override
   }
 }
 ```
+
+#### Biome Sources
+
+Hex Lands adds two biome sources:
+
+- `hexlands:hexlands` This is the default biome source, used in the Overworld, and Nether (and End, if the config option `preserveMainEndIsland` is set to `false`).
+- `hexlands:end_hexlands` This is a special biome source, meant for use in the End. It has a couple modifications:
+    - This will use the island noise parameter in the chunk generator. This preserves both the main End island, and also the surrounding void.
+    - In addition, the biome inside said center region will use the origin biome of the world, and be unaffected by the otherwise applied `biome_scale` parameter. This also has the effect of keeping the central End island to be the same as in vanilla, and unaffected by HexLands.
 
 ### Gallery
 
