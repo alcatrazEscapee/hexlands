@@ -9,6 +9,13 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.registry.Registry;
+import net.minecraft.world.biome.Biome;
+import net.minecraft.world.biome.Biomes;
+import net.minecraft.world.gen.GenerationStage;
+import net.minecraft.world.gen.feature.Features;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.world.BiomeLoadingEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -31,9 +38,13 @@ public class HexLands
     {
         LOGGER.info("Wait, this isn't Catan...");
 
-        final IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
-        HexLandsWorldType.WORLD_TYPES.register(bus);
-        bus.addListener(this::setup);
+        final IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
+        final IEventBus forgeBus = MinecraftForge.EVENT_BUS;
+
+        HexLandsWorldType.WORLD_TYPES.register(modBus);
+        modBus.addListener(this::setup);
+        forgeBus.addListener(EventPriority.HIGH, this::onBiomeLoad);
+
         HexLandsConfig.init();
     }
 
@@ -45,5 +56,13 @@ public class HexLands
             Registry.register(Registry.BIOME_SOURCE, new ResourceLocation(MOD_ID, "hexlands"), HexBiomeSource.CODEC);
             Registry.register(Registry.BIOME_SOURCE, new ResourceLocation(MOD_ID, "end_hexlands"), HexEndBiomeSource.CODEC);
         });
+    }
+
+    private void onBiomeLoad(BiomeLoadingEvent event)
+    {
+        if (HexLandsConfig.COMMON.addEndSpikesToEndBiomes.get() && event.getName() != null && event.getCategory() == Biome.Category.THEEND && !Biomes.THE_END.location().equals(event.getName()))
+        {
+            event.getGeneration().addFeature(GenerationStage.Decoration.SURFACE_STRUCTURES, Features.END_SPIKE);
+        }
     }
 }
