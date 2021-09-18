@@ -3,10 +3,12 @@
  * Licensed under MIT. See the project LICENSE.txt for details.
  */
 
-@MethodsReturnNonnullByDefault
 @ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+@FieldsAreNonnullByDefault
 package com.alcatrazescapee.hexlands.world;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
-import mcp.MethodsReturnNonnullByDefault;
+import net.minecraft.FieldsAreNonnullByDefault;
+import net.minecraft.MethodsReturnNonnullByDefault;

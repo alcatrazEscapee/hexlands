@@ -5,130 +5,78 @@
 
 package com.alcatrazescapee.hexlands.world;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.function.Predicate;
+import java.util.*;
+import java.util.function.Consumer;
+import java.util.function.DoubleFunction;
 import java.util.function.Supplier;
-import java.util.stream.IntStream;
+
 import javax.annotation.Nullable;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.entity.EntityClassification;
-import net.minecraft.util.SharedSeedRandom;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.MutableBoundingBox;
-import net.minecraft.world.Blockreader;
-import net.minecraft.world.IBlockReader;
-import net.minecraft.world.IWorld;
-import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.MobSpawnInfo;
-import net.minecraft.world.biome.provider.BiomeProvider;
-import net.minecraft.world.biome.provider.EndBiomeProvider;
-import net.minecraft.world.chunk.ChunkPrimer;
-import net.minecraft.world.chunk.ChunkSection;
-import net.minecraft.world.chunk.IChunk;
-import net.minecraft.world.gen.*;
-import net.minecraft.world.gen.feature.jigsaw.JigsawJunction;
-import net.minecraft.world.gen.feature.structure.AbstractVillagePiece;
-import net.minecraft.world.gen.feature.structure.StructureManager;
-import net.minecraft.world.gen.feature.structure.StructurePiece;
-import net.minecraft.world.gen.settings.NoiseSettings;
-import net.minecraft.world.gen.surfacebuilders.SurfaceBuilder;
-import net.minecraft.world.gen.surfacebuilders.SurfaceBuilderConfig;
-import net.minecraft.world.spawner.WorldEntitySpawner;
-import net.minecraftforge.common.world.StructureSpawnManager;
+import com.google.common.collect.Lists;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.WorldGenRegion;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.StructureFeatureManager;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.BiomeSource;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.ChunkAccess;
+import net.minecraft.world.level.chunk.ChunkGenerator;
+import net.minecraft.world.level.chunk.LevelChunkSection;
+import net.minecraft.world.level.chunk.ProtoChunk;
+import net.minecraft.world.level.levelgen.*;
+import net.minecraft.world.level.levelgen.surfacebuilders.SurfaceBuilder;
+import net.minecraft.world.level.levelgen.surfacebuilders.SurfaceBuilderBaseConfiguration;
 
 import com.alcatrazescapee.hexlands.util.Hex;
-import com.alcatrazescapee.hexlands.util.HexLandsConfig;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.HashCommon;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.objects.ObjectList;
-import it.unimi.dsi.fastutil.objects.ObjectListIterator;
 
 @SuppressWarnings("deprecation")
-public class HexChunkGenerator extends ChunkGenerator
+public class HexChunkGenerator extends NoiseBasedChunkGenerator
 {
     public static final Codec<HexChunkGenerator> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-        BiomeProvider.CODEC.comapFlatMap(
+        BiomeSource.CODEC.comapFlatMap(
             source -> {
-                if (source instanceof HexBiomeSource)
+                if (source instanceof HexBiomeSource hex)
                 {
-                    return DataResult.success((HexBiomeSource) source);
+                    return DataResult.success(hex);
                 }
                 return DataResult.error("HexLands chunk generator requires a HexLands biome source");
             },
             source -> source
         ).fieldOf("biome_source").forGetter(c -> c.hexBiomeSource),
-        DimensionSettings.CODEC.fieldOf("settings").forGetter(c -> c.settings),
-        Codec.LONG.fieldOf("seed").forGetter(c -> c.seed)
+        Codec.LONG.fieldOf("seed").forGetter(c -> c.seed),
+        NoiseGeneratorSettings.CODEC.fieldOf("settings").forGetter(c -> c.settings)
     ).apply(instance, HexChunkGenerator::new));
 
-    public static final BlockState AIR = Blocks.AIR.defaultBlockState();
+    private static final BlockState AIR = Blocks.AIR.defaultBlockState();
 
     private final HexBiomeSource hexBiomeSource;
-    private final Supplier<DimensionSettings> settings;
-    private final long seed;
+    private final HexNoiseSampler hexSampler;
 
     private final HexSettings hexSettings;
-    private final SurfaceBuilder<SurfaceBuilderConfig> hexBorderSurfaceBuilder;
-    private final SurfaceBuilderConfig hexBorderSurfaceBuilderConfig;
+    private final SurfaceBuilder<SurfaceBuilderBaseConfiguration> hexBorderSurfaceBuilder;
+    private final SurfaceBuilderBaseConfiguration hexBorderSurfaceBuilderConfig;
 
-    private final int height;
-    private final int chunkHeight, chunkWidth;
-    private final int chunkCountX, chunkCountY, chunkCountZ;
+    @Nullable private NoiseGeneratorSettings cachedSettings;
 
-    private final BlockState defaultBlock, defaultFluid;
-
-    private final OctavesNoiseGenerator minLimitPerlinNoise;
-    private final OctavesNoiseGenerator maxLimitPerlinNoise;
-    private final OctavesNoiseGenerator mainPerlinNoise;
-    private final INoiseGenerator surfaceNoise;
-    private final OctavesNoiseGenerator depthNoise;
-    @Nullable private final SimplexNoiseGenerator islandNoise;
-
-    private DimensionSettings cachedSettings;
-
-    public HexChunkGenerator(HexBiomeSource hexBiomeSource, Supplier<DimensionSettings> settings, long seed)
+    public HexChunkGenerator(HexBiomeSource hexBiomeSource, long seed, Supplier<NoiseGeneratorSettings> settings)
     {
-        super(hexBiomeSource, settings.get().structureSettings());
+        super(hexBiomeSource, seed, settings);
+
+        final NoiseGeneratorSettings noiseGeneratorSettings = settings.get();
+        final NoiseSettings noiseSettings = noiseGeneratorSettings.noiseSettings();
 
         this.hexBiomeSource = hexBiomeSource;
-        this.settings = settings;
-        this.seed = seed;
+        this.hexSampler = new HexNoiseSampler(hexBiomeSource, cellWidth, cellHeight, cellCountY, noiseSettings, sampler.blendedNoise, sampler.islandNoise, sampler.depthNoise, sampler.caveNoiseModifier);
 
         this.hexSettings = hexBiomeSource.hexSettings();
         this.hexBorderSurfaceBuilder = hexSettings.borderExtendsToBedrock() ? new HexBorderSurfaceBuilder(hexSettings.borderState()) : SurfaceBuilder.DEFAULT;
-        this.hexBorderSurfaceBuilderConfig = new SurfaceBuilderConfig(hexSettings.borderState(), hexSettings.borderState(), hexSettings.borderState());
-
-        final DimensionSettings dimensionSettings = settings.get();
-        final NoiseSettings noiseSettings = dimensionSettings.noiseSettings();
-
-        this.height = noiseSettings.height();
-        this.chunkHeight = noiseSettings.noiseSizeVertical() * 4;
-        this.chunkWidth = noiseSettings.noiseSizeHorizontal() * 4;
-        this.defaultBlock = dimensionSettings.getDefaultBlock();
-        this.defaultFluid = dimensionSettings.getDefaultFluid();
-        this.chunkCountX = 16 / chunkWidth;
-        this.chunkCountY = height / chunkHeight;
-        this.chunkCountZ = 16 / chunkWidth;
-
-        final SharedSeedRandom random = new SharedSeedRandom(seed);
-
-        this.minLimitPerlinNoise = new OctavesNoiseGenerator(random, IntStream.rangeClosed(-15, 0));
-        this.maxLimitPerlinNoise = new OctavesNoiseGenerator(random, IntStream.rangeClosed(-15, 0));
-        this.mainPerlinNoise = new OctavesNoiseGenerator(random, IntStream.rangeClosed(-7, 0));
-        this.surfaceNoise = noiseSettings.useSimplexSurfaceNoise() ? new PerlinNoiseGenerator(random, IntStream.rangeClosed(-3, 0)) : new OctavesNoiseGenerator(random, IntStream.rangeClosed(-3, 0));
-        this.depthNoise = new OctavesNoiseGenerator(random, IntStream.rangeClosed(-15, 0));
-
-        this.islandNoise = HexLandsConfig.COMMON.preserveMainEndIsland.get() && noiseSettings.islandNoiseOverride() ? new SimplexNoiseGenerator(random) : null;
+        this.hexBorderSurfaceBuilderConfig = new SurfaceBuilderBaseConfiguration(hexSettings.borderState(), hexSettings.borderState(), hexSettings.borderState());
     }
 
     @Override
@@ -140,16 +88,16 @@ public class HexChunkGenerator extends ChunkGenerator
     @Override
     public ChunkGenerator withSeed(long seed)
     {
-        return new HexChunkGenerator(hexBiomeSource.withSeed(seed), settings, seed);
+        return new HexChunkGenerator(hexBiomeSource.withSeed(seed), seed, settings);
     }
 
     @Override
-    public void buildSurfaceAndBedrock(WorldGenRegion world, IChunk chunkIn)
+    public void buildSurfaceAndBedrock(WorldGenRegion level, ChunkAccess chunk)
     {
-        final SharedSeedRandom random = new SharedSeedRandom(seed);
-        random.setBaseChunkSeed(chunkIn.getPos().x, chunkIn.getPos().z);
+        final WorldgenRandom random = new WorldgenRandom(seed);
+        random.setBaseChunkSeed(chunk.getPos().x, chunk.getPos().z);
 
-        final ChunkPos chunkPos = chunkIn.getPos();
+        final ChunkPos chunkPos = chunk.getPos();
         final int blockX = chunkPos.getMinBlockX(), blockZ = chunkPos.getMinBlockZ();
 
         final Map<Hex, Biome> biomesByHex = new HashMap<>();
@@ -168,7 +116,7 @@ public class HexChunkGenerator extends ChunkGenerator
                 final Hex hex = Hex.blockToHex(x * hexScale, z * hexScale, hexSize);
                 final Hex adjacentHex = hex.adjacent(x * hexScale, z * hexScale);
 
-                final int y = chunkIn.getHeight(Heightmap.Type.WORLD_SURFACE_WG, localX, localZ) + 1;
+                final int y = chunk.getHeight(Heightmap.Types.WORLD_SURFACE_WG, localX, localZ) + 1;
                 final double noise = surfaceNoise.getSurfaceNoiseValue(x * 0.0625D, z * 0.0625D, 0.0625D, localX * 0.0625D) * 15.0D;
                 final Biome biome = biomesByHex.computeIfAbsent(hex, hexBiomeSource::getHexBiome);
                 if (hex.radius(x * hexScale, z * hexScale) >= hexBorder)
@@ -176,57 +124,36 @@ public class HexChunkGenerator extends ChunkGenerator
                     final Biome adjacentBiome = biomesByHex.computeIfAbsent(adjacentHex, hexBiomeSource::getHexBiome);
                     if (adjacentBiome != biome)
                     {
-                        hexBorderSurfaceBuilder.apply(random, chunkIn, biome, x, z, y, noise, defaultBlock, defaultFluid, getSeaLevel(), world.getSeed(), hexBorderSurfaceBuilderConfig);
+                        hexBorderSurfaceBuilder.apply(random, chunk, biome, x, z, y, noise, defaultBlock, defaultFluid, getSeaLevel(), settings().getMinSurfaceLevel(), level.getSeed(), hexBorderSurfaceBuilderConfig);
                         continue;
                     }
                 }
                 // Otherwise
-                biome.buildSurfaceAt(random, chunkIn, x, z, y, noise, defaultBlock, defaultFluid, getSeaLevel(), world.getSeed());
+                biome.buildSurfaceAt(random, chunk, x, z, y, noise, defaultBlock, defaultFluid, getSeaLevel(), settings().getMinSurfaceLevel(), level.getSeed());
             }
         }
-
-        buildBedrock(chunkIn, random);
+        setBedrock(chunk, random);
     }
 
     @Override
-    public void spawnOriginalMobs(WorldGenRegion world)
+    protected ChunkAccess doFill(StructureFeatureManager structureManager, ChunkAccess chunk, int minCellY, int cellCountY)
     {
-        // mojang are you serious? this is protected!?
-        // if (!settings.get().disableMobGeneration())
-        {
-            final int centerX = world.getCenterX();
-            final int centerZ = world.getCenterZ();
-            final Biome biome = world.getBiome(new ChunkPos(centerX, centerZ).getWorldPosition());
-            final SharedSeedRandom random = new SharedSeedRandom();
-            random.setDecorationSeed(world.getSeed(), centerX << 4, centerZ << 4);
-            WorldEntitySpawner.spawnMobsForChunkGeneration(world, biome, centerX, centerZ, random);
-        }
-    }
+        final Heightmap oceanFloor = chunk.getOrCreateHeightmapUnprimed(Heightmap.Types.OCEAN_FLOOR_WG);
+        final Heightmap worldSurface = chunk.getOrCreateHeightmapUnprimed(Heightmap.Types.WORLD_SURFACE_WG);
+        final ChunkPos chunkPos = chunk.getPos();
+        final int chunkX = chunkPos.getMinBlockX();
+        final int chunkZ = chunkPos.getMinBlockZ();
+        final Beardifier beardifier = new Beardifier(structureManager, chunk) {};
+        final Aquifer aquifer = getAquifer(minCellY, cellCountY, chunkPos);
+        final NoiseInterpolator mainNoiseInterpolator = new NoiseInterpolator(cellCountX, cellCountY, cellCountZ, chunkPos, minCellY, this::fillNoiseColumn);
+        final List<NoiseInterpolator> interpolators = new ArrayList<>();
+        interpolators.add(mainNoiseInterpolator);
+        final DoubleFunction<BaseStoneSource> baseStoneSource = createBaseStoneSource(minCellY, chunkPos, interpolators::add);
+        final DoubleFunction<NoiseModifier> caveNoiseModifier = createCaveNoiseModifier(minCellY, chunkPos, interpolators::add);
 
-    public int getGenDepth()
-    {
-        return height;
-    }
-
-    @Override
-    public List<MobSpawnInfo.Spawners> getMobsAt(Biome biome, StructureManager structureManager, EntityClassification entityClassification, BlockPos pos)
-    {
-        List<MobSpawnInfo.Spawners> spawns = StructureSpawnManager.getStructureSpawns(structureManager, entityClassification, pos);
-        if (spawns != null)
-        {
-            return spawns; // thanks forge
-        }
-        return super.getMobsAt(biome, structureManager, entityClassification, pos);
-    }
-
-    @Override
-    public void fillFromNoise(IWorld world, StructureManager structureManager, IChunk chunkIn)
-    {
-        final ChunkPos chunkPos = chunkIn.getPos();
-        final int chunkX = chunkPos.x, chunkZ = chunkPos.z;
-        final int blockX = chunkPos.getMinBlockX(), blockZ = chunkPos.getMinBlockZ();
         final Hex[] hexes = new Hex[16 * 16], adjacentHexes = new Hex[16 * 16];
         final Map<Hex, Biome> biomesByHex = new HashMap<>();
+        final Random hexBorderRandom = new Random();
 
         final double hexScale = hexSettings.biomeScale();
         final double hexSize = hexSettings.hexSize() * hexScale;
@@ -237,7 +164,7 @@ public class HexChunkGenerator extends ChunkGenerator
         {
             for (int z = 0; z < 16; z++)
             {
-                final int hx = blockX + x, hz = blockZ + z;
+                final int hx = chunkX + x, hz = chunkZ + z;
                 final Hex hex = Hex.blockToHex(hx * hexScale, hz * hexScale, hexSize);
                 final Hex adjacent = hex.adjacent(hx * hexScale, hz * hexScale);
 
@@ -250,117 +177,57 @@ public class HexChunkGenerator extends ChunkGenerator
             }
         }
 
-        final ObjectList<StructurePiece> pieces = new ObjectArrayList<>(10);
-        final ObjectList<JigsawJunction> junctions = new ObjectArrayList<>(32);
-        Beardifier.sampleStructureContributions(chunkIn, structureManager, pieces, junctions);
+        interpolators.forEach(NoiseInterpolator::initializeForFirstCellX);
 
-        final double[][][] noiseValues = new double[2][chunkCountZ + 1][chunkCountY + 1];
-        for (int z = 0; z < chunkCountZ + 1; ++z)
+        final BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        for (int cellX = 0; cellX < cellCountX; ++cellX)
         {
-            noiseValues[0][z] = new double[chunkCountY + 1];
-            fillNoiseColumn(noiseValues[0][z], chunkX * chunkCountX, chunkZ * chunkCountZ + z);
-            noiseValues[1][z] = new double[chunkCountY + 1];
-        }
+            final int finalCellX = cellX;
+            interpolators.forEach(interpolator -> interpolator.advanceCellX(finalCellX));
 
-        final ChunkPrimer chunk = (ChunkPrimer) chunkIn;
-        final Heightmap oceanFloor = chunk.getOrCreateHeightmapUnprimed(Heightmap.Type.OCEAN_FLOOR_WG);
-        final Heightmap worldSurface = chunk.getOrCreateHeightmapUnprimed(Heightmap.Type.WORLD_SURFACE_WG);
-        final BlockPos.Mutable pos = new BlockPos.Mutable();
-        final Random hexBorderRandom = new Random();
-        final ObjectListIterator<StructurePiece> pieceIterator = pieces.iterator();
-        final ObjectListIterator<JigsawJunction> junctionIterator = junctions.iterator();
-
-        for (int cellX = 0; cellX < chunkCountX; ++cellX)
-        {
-            for (int cellZ = 0; cellZ < chunkCountZ + 1; ++cellZ)
+            for (int cellZ = 0; cellZ < cellCountZ; ++cellZ)
             {
-                fillNoiseColumn(noiseValues[1][cellZ], chunkX * chunkCountX + cellX + 1, chunkZ * chunkCountZ + cellZ);
-            }
-
-            for (int cellZ = 0; cellZ < chunkCountZ; ++cellZ)
-            {
-                ChunkSection section = chunk.getOrCreateSection(15);
-                section.acquire();
-
-                for (int cellY = chunkCountY - 1; cellY >= 0; --cellY)
+                LevelChunkSection section = chunk.getOrCreateSection(chunk.getSectionsCount() - 1);
+                for (int cellY = cellCountY - 1; cellY >= 0; --cellY)
                 {
-                    /// noiseXYZ
-                    final double noise000 = noiseValues[0][cellZ][cellY];
-                    final double noise001 = noiseValues[0][cellZ + 1][cellY];
-                    final double noise100 = noiseValues[1][cellZ][cellY];
-                    final double noise101 = noiseValues[1][cellZ + 1][cellY];
-                    final double noise010 = noiseValues[0][cellZ][cellY + 1];
-                    final double noise011 = noiseValues[0][cellZ + 1][cellY + 1];
-                    final double noise110 = noiseValues[1][cellZ][cellY + 1];
-                    final double noise111 = noiseValues[1][cellZ + 1][cellY + 1];
+                    final int finalCellZ = cellZ, finalCellY = cellY;
+                    interpolators.forEach(interpolator -> interpolator.selectCellYZ(finalCellY, finalCellZ));
 
-                    for (int localY = chunkHeight - 1; localY >= 0; --localY)
+                    for (int localCellY = cellHeight - 1; localCellY >= 0; --localCellY)
                     {
-                        final int y = cellY * chunkHeight + localY;
-                        final int sectionY = y & 15;
-                        final int sectionIndex = y >> 4;
-                        if (section.bottomBlockY() >> 4 != sectionIndex)
+                        final int y = (minCellY + cellY) * cellHeight + localCellY;
+                        final int localY = y & 15;
+
+                        final int sectionIndex = chunk.getSectionIndex(y);
+                        if (chunk.getSectionIndex(section.bottomBlockY()) != sectionIndex)
                         {
-                            section.release();
                             section = chunk.getOrCreateSection(sectionIndex);
-                            section.acquire();
                         }
 
-                        final double deltaY = (double) localY / chunkHeight;
+                        final double deltaY = (double) localCellY / cellHeight;
+                        interpolators.forEach(interpolator -> interpolator.updateForY(deltaY));
 
-                        // noiseXZ
-                        final double noise00 = MathHelper.lerp(deltaY, noise000, noise010);
-                        final double noise10 = MathHelper.lerp(deltaY, noise100, noise110);
-                        final double noise01 = MathHelper.lerp(deltaY, noise001, noise011);
-                        final double noise11 = MathHelper.lerp(deltaY, noise101, noise111);
-
-                        for (int localX = 0; localX < chunkWidth; ++localX)
+                        for (int localCellX = 0; localCellX < cellWidth; ++localCellX)
                         {
-                            final int x = blockX + cellX * chunkWidth + localX;
-                            final int sectionX = x & 15;
-                            final double deltaX = (double) localX / chunkWidth;
+                            final int x = chunkX + cellX * cellWidth + localCellX;
+                            final int localX = x & 15;
+                            final double deltaX = (double) localCellX / cellWidth;
+                            interpolators.forEach(interpolator -> interpolator.updateForX(deltaX));
 
-                            // noiseZ
-                            final double noise0 = MathHelper.lerp(deltaX, noise00, noise10);
-                            final double noise1 = MathHelper.lerp(deltaX, noise01, noise11);
-
-                            for (int localZ = 0; localZ < chunkWidth; ++localZ)
+                            for (int localCellZ = 0; localCellZ < cellWidth; ++localCellZ)
                             {
-                                final int z = blockZ + cellZ * chunkWidth + localZ;
-                                final int sectionZ = z & 15;
-                                final double deltaZ = (double) localZ / chunkWidth;
+                                final int z = chunkZ + cellZ * cellWidth + localCellZ;
+                                final int localZ = z & 15;
+                                final double deltaZ = (double) localCellZ / cellWidth;
 
-                                final double noise = MathHelper.lerp(deltaZ, noise0, noise1);
-                                double clampedNoise = MathHelper.clamp(noise / 200.0D, -1.0D, 1.0D);
-
-                                // More beardifier nonsense
-                                int x0, y0, z0;
-                                for (clampedNoise = clampedNoise / 2.0D - clampedNoise * clampedNoise * clampedNoise / 24.0D; pieceIterator.hasNext(); clampedNoise += Beardifier.getContribution(x0, y0, z0) * 0.8D)
-                                {
-                                    StructurePiece piece = pieceIterator.next();
-                                    MutableBoundingBox box = piece.getBoundingBox();
-                                    x0 = Math.max(0, Math.max(box.x0 - x, x - box.x1));
-                                    y0 = y - (box.y0 + (piece instanceof AbstractVillagePiece ? ((AbstractVillagePiece) piece).getGroundLevelDelta() : 0));
-                                    z0 = Math.max(0, Math.max(box.z0 - z, z - box.z1));
-                                }
-
-                                pieceIterator.back(pieces.size());
-                                while (junctionIterator.hasNext())
-                                {
-                                    JigsawJunction junction = junctionIterator.next();
-                                    int dx = x - junction.getSourceX();
-                                    x0 = y - junction.getSourceGroundY();
-                                    y0 = z - junction.getSourceZ();
-                                    clampedNoise += Beardifier.getContribution(dx, x0, y0) * 0.4D;
-                                }
-                                junctionIterator.back(junctions.size());
+                                double noise = mainNoiseInterpolator.calculateValue(deltaZ);
 
                                 // Hex borders
-                                final Hex hex = hexes[sectionX + sectionZ * 16];
+                                final Hex hex = hexes[localX + localZ * 16];
                                 if (hex.radius(x * hexScale, z * hexScale) > hexBorder)
                                 {
                                     final Biome biome = biomesByHex.get(hex);
-                                    final Hex adjacentHex = adjacentHexes[sectionX + sectionZ * 16];
+                                    final Hex adjacentHex = adjacentHexes[localX + localZ * 16];
                                     final Biome adjacentBiome = biomesByHex.get(adjacentHex);
 
                                     assert biome != null;
@@ -368,59 +235,45 @@ public class HexChunkGenerator extends ChunkGenerator
 
                                     if (biome != adjacentBiome) // No borders between adjacent hexes of the same biome
                                     {
-                                        clampedNoise = applyHexBorderNoiseModifier(hex, biome, hexBorderRandom, y);
+                                        noise = applyHexBorderNoiseModifier(hex, biome, hexBorderRandom, y);
                                     }
                                 }
 
-                                final BlockState state = generateBaseState(clampedNoise, y);
-                                if (!state.isAir())
+                                BlockState state = updateNoiseAndGenerateBaseState(beardifier, aquifer, baseStoneSource.apply(deltaZ), caveNoiseModifier.apply(deltaZ), x, y, z, noise);
+                                if (state != AIR)
                                 {
-                                    pos.set(x, y, z);
-                                    if (state.getLightValue(chunk, pos) != 0)
+                                    if (state.getLightEmission() != 0 && chunk instanceof ProtoChunk)
                                     {
-                                        chunk.addLight(pos);
+                                        cursor.set(x, y, z);
+                                        ((ProtoChunk) chunk).addLight(cursor);
                                     }
 
-                                    section.setBlockState(sectionX, sectionY, sectionZ, state, false);
-                                    oceanFloor.update(sectionX, y, sectionZ, state);
-                                    worldSurface.update(sectionX, y, sectionZ, state);
+                                    section.setBlockState(localX, localY, localZ, state, false);
+                                    oceanFloor.update(localX, y, localZ, state);
+                                    worldSurface.update(localX, y, localZ, state);
+                                    if (aquifer.shouldScheduleFluidUpdate() && !state.getFluidState().isEmpty())
+                                    {
+                                        cursor.set(x, y, z);
+                                        chunk.getLiquidTicks().scheduleTick(cursor, state.getFluidState().getType(), 0);
+                                    }
                                 }
                             }
                         }
                     }
                 }
-
-                section.release();
             }
-
-            // Swap
-            final double[][] noiseColumn = noiseValues[0];
-            noiseValues[0] = noiseValues[1];
-            noiseValues[1] = noiseColumn;
+            interpolators.forEach(NoiseInterpolator::swapSlices);
         }
+        return chunk;
     }
 
     @Override
-    public int getSeaLevel()
+    protected void fillNoiseColumn(double[] column, int cellX, int cellY, int minCellY, int cellCountY)
     {
-        return settings().seaLevel();
+        hexSampler.fillNoiseColumn(column, cellX, cellY, settings().noiseSettings(), getSeaLevel(), minCellY, cellCountY);
     }
 
-    @Override
-    public int getBaseHeight(int x, int z, Heightmap.Type type)
-    {
-        return iterateNoiseColumn(x, z, null, type.isOpaque());
-    }
-
-    @Override
-    public IBlockReader getBaseColumn(int x, int z)
-    {
-        final BlockState[] column = new BlockState[chunkCountY * chunkHeight];
-        iterateNoiseColumn(x, z, column, null);
-        return new Blockreader(column);
-    }
-
-    protected DimensionSettings settings()
+    protected NoiseGeneratorSettings settings()
     {
         if (cachedSettings == null)
         {
@@ -445,25 +298,9 @@ public class HexChunkGenerator extends ChunkGenerator
         }
         else
         {
-            final double biomeHeight = getBaseBiomeHeight(biome) * chunkHeight;
+            final double biomeHeight = getBaseBiomeHeight(biome) * cellHeight;
             final int adjustedHeight = (int) (biomeHeight + random.nextInt(4) - random.nextInt(4));
             return y < adjustedHeight ? 1 : -1;
-        }
-    }
-
-    protected BlockState generateBaseState(double noise, int y)
-    {
-        if (noise > 0)
-        {
-            return defaultBlock;
-        }
-        else if (y < getSeaLevel())
-        {
-            return defaultFluid;
-        }
-        else
-        {
-            return AIR;
         }
     }
 
@@ -482,219 +319,6 @@ public class HexChunkGenerator extends ChunkGenerator
         depth = (depth * 0.5F - 0.125F) * 0.265625D;
 
         // cellY
-        return (1 + (depth + densityOffset) / densityFactor) * (chunkCountY / 2.0D);
-    }
-
-    protected void fillNoiseColumn(double[] noiseColumn, int cellX, int cellZ)
-    {
-        final NoiseSettings noiseSettings = settings().noiseSettings();
-
-        final double xzScale = 684.412D * noiseSettings.noiseSamplingSettings().xzScale();
-        final double yScale = 684.412D * noiseSettings.noiseSamplingSettings().yScale();
-        final double xzFactor = xzScale / noiseSettings.noiseSamplingSettings().xzFactor();
-        final double yFactor = yScale / noiseSettings.noiseSamplingSettings().yFactor();
-        final double topSlideTarget = noiseSettings.topSlideSettings().target();
-        final double topSlideSize = noiseSettings.topSlideSettings().size();
-        final double topSlideOffset = noiseSettings.topSlideSettings().offset();
-        final double bottomSlideTarget = noiseSettings.bottomSlideSettings().target();
-        final double bottomSlideSize = noiseSettings.bottomSlideSettings().size();
-        final double bottomSlideOffset = noiseSettings.bottomSlideSettings().offset();
-        final double randomDensityOffset = noiseSettings.randomDensityOffset() ? getRandomDensity(cellX, cellZ) : 0.0D;
-        final double densityFactor = noiseSettings.densityFactor();
-        final double densityOffset = noiseSettings.densityOffset();
-
-        double depth, scale;
-        if (islandNoise != null)
-        {
-            depth = EndBiomeProvider.getHeightValue(islandNoise, cellX, cellZ) - 8.0F;
-            scale = depth > 0.0D ? 0.25D : 1.0D;
-        }
-        else
-        {
-            final Biome hexBiome = hexBiomeSource.getNoiseBiome(cellX, getSeaLevel(), cellZ);
-            depth = hexBiome.getDepth();
-            scale = hexBiome.getScale();
-            if (noiseSettings.isAmplified() && depth > 0.0F)
-            {
-                depth = 1.0F + depth * 2.0F;
-                scale = 1.0F + scale * 4.0F;
-            }
-
-            depth = (depth * 0.5F - 0.125F) * 0.265625D;
-            scale = 96.0D / (scale * 0.9F + 0.1F);
-        }
-
-        for (int cellY = 0; cellY <= chunkCountY; ++cellY)
-        {
-            double noise0 = sampleAndClampNoise(cellX, cellY, cellZ, xzScale, yScale, xzFactor, yFactor);
-            double noise1 = 1.0D - cellY * 2.0D / chunkCountY + randomDensityOffset;
-            double noise2 = noise1 * densityFactor + densityOffset;
-            double noise3 = (noise2 + depth) * scale;
-            if (noise3 > 0.0D)
-            {
-                noise0 = noise0 + noise3 * 4.0D;
-            }
-            else
-            {
-                noise0 = noise0 + noise3;
-            }
-
-            if (topSlideSize > 0.0D)
-            {
-                double topSlide = ((double) (chunkCountY - cellY) - topSlideOffset) / topSlideSize;
-                noise0 = MathHelper.clampedLerp(topSlideTarget, noise0, topSlide);
-            }
-
-            if (bottomSlideSize > 0.0D)
-            {
-                double bottomSlide = ((double) cellY - bottomSlideOffset) / bottomSlideSize;
-                noise0 = MathHelper.clampedLerp(bottomSlideTarget, noise0, bottomSlide);
-            }
-
-            noiseColumn[cellY] = noise0;
-        }
-    }
-
-    protected double[] makeAndFillNoiseColumn(int x, int z)
-    {
-        final double[] noiseValues = new double[chunkCountY + 1];
-        fillNoiseColumn(noiseValues, x, z);
-        return noiseValues;
-    }
-
-    protected int iterateNoiseColumn(int x, int z, @Nullable BlockState[] column, @Nullable Predicate<BlockState> check)
-    {
-        int cellX = Math.floorDiv(x, chunkWidth);
-        int cellZ = Math.floorDiv(z, chunkWidth);
-        int localX = Math.floorMod(x, chunkWidth);
-        int localZ = Math.floorMod(z, chunkWidth);
-        double deltaX = (double) localX / chunkWidth;
-        double deltaZ = (double) localZ / chunkWidth;
-        double[][] noiseValues = new double[][] {makeAndFillNoiseColumn(cellX, cellZ), makeAndFillNoiseColumn(cellX, cellZ + 1), makeAndFillNoiseColumn(cellX + 1, cellZ), makeAndFillNoiseColumn(cellX + 1, cellZ + 1)};
-
-        for (int cellY = chunkCountY - 1; cellY >= 0; --cellY)
-        {
-            double noise000 = noiseValues[0][cellY];
-            double noise001 = noiseValues[1][cellY];
-            double noise100 = noiseValues[2][cellY];
-            double noise101 = noiseValues[3][cellY];
-            double noise010 = noiseValues[0][cellY + 1];
-            double noise011 = noiseValues[1][cellY + 1];
-            double noise110 = noiseValues[2][cellY + 1];
-            double noise111 = noiseValues[3][cellY + 1];
-
-            for (int localY = chunkHeight - 1; localY >= 0; --localY)
-            {
-                double deltaY = (double) localY / chunkHeight;
-                double noise = MathHelper.lerp3(deltaY, deltaX, deltaZ, noise000, noise010, noise100, noise110, noise001, noise011, noise101, noise111);
-                int y = cellY * chunkHeight + localY;
-                BlockState state = generateBaseState(noise, y);
-                if (column != null)
-                {
-                    column[y] = state;
-                }
-
-                if (check != null && check.test(state))
-                {
-                    return y + 1;
-                }
-            }
-        }
-        return 0;
-    }
-
-    protected void buildBedrock(IChunk chunkIn, Random random)
-    {
-        final BlockPos.Mutable mutablePos = new BlockPos.Mutable();
-        final int blockX = chunkIn.getPos().getMinBlockX();
-        final int blockZ = chunkIn.getPos().getMinBlockZ();
-        final DimensionSettings settings = settings();
-        final int floorY = settings.getBedrockFloorPosition();
-        final int roofY = height - 1 - settings.getBedrockRoofPosition();
-        final boolean roof = roofY + 4 >= 0 && roofY < height;
-        final boolean floor = floorY + 4 >= 0 && floorY < height;
-        if (roof || floor)
-        {
-            for (BlockPos pos : BlockPos.betweenClosed(blockX, 0, blockZ, blockX + 15, 0, blockZ + 15))
-            {
-                if (roof)
-                {
-                    for (int y = 0; y < 5; ++y)
-                    {
-                        if (y <= random.nextInt(5))
-                        {
-                            chunkIn.setBlockState(mutablePos.set(pos.getX(), roofY - y, pos.getZ()), Blocks.BEDROCK.defaultBlockState(), false);
-                        }
-                    }
-                }
-
-                if (floor)
-                {
-                    for (int y = 4; y >= 0; --y)
-                    {
-                        if (y <= random.nextInt(5))
-                        {
-                            chunkIn.setBlockState(mutablePos.set(pos.getX(), floorY + y, pos.getZ()), Blocks.BEDROCK.defaultBlockState(), false);
-                        }
-                    }
-                }
-            }
-
-        }
-    }
-
-    protected double sampleAndClampNoise(int cellX, int cellY, int cellZ, double xzScale, double yScale, double xzFactor, double yFactor)
-    {
-        double minLimit = 0.0D;
-        double maxLimit = 0.0D;
-        double main = 0.0D;
-        double amplitude = 1.0D;
-
-        for (int i = 0; i < 16; ++i)
-        {
-            double x0 = OctavesNoiseGenerator.wrap(cellX * xzScale * amplitude);
-            double y0 = OctavesNoiseGenerator.wrap(cellY * yScale * amplitude);
-            double z0 = OctavesNoiseGenerator.wrap(cellZ * xzScale * amplitude);
-            double y1 = yScale * amplitude;
-            ImprovedNoiseGenerator minLimitNoise = minLimitPerlinNoise.getOctaveNoise(i);
-            if (minLimitNoise != null)
-            {
-                minLimit += minLimitNoise.noise(x0, y0, z0, y1, cellY * y1) / amplitude;
-            }
-
-            ImprovedNoiseGenerator maxLimitNoise = maxLimitPerlinNoise.getOctaveNoise(i);
-            if (maxLimitNoise != null)
-            {
-                maxLimit += maxLimitNoise.noise(x0, y0, z0, y1, cellY * y1) / amplitude;
-            }
-
-            if (i < 8)
-            {
-                ImprovedNoiseGenerator mainNoise = mainPerlinNoise.getOctaveNoise(i);
-                if (mainNoise != null)
-                {
-                    main += mainNoise.noise(OctavesNoiseGenerator.wrap(cellX * xzFactor * amplitude), OctavesNoiseGenerator.wrap(cellY * yFactor * amplitude), OctavesNoiseGenerator.wrap(cellZ * xzFactor * amplitude), yFactor * amplitude, cellY * yFactor * amplitude) / amplitude;
-                }
-            }
-            amplitude /= 2.0D;
-        }
-        return MathHelper.clampedLerp(minLimit / 512.0D, maxLimit / 512.0D, (main / 10.0D + 1.0D) / 2.0D);
-    }
-
-    protected double getRandomDensity(int x, int z)
-    {
-        double noise0 = depthNoise.getValue(x * 200, 10.0D, z * 200, 1.0D, 0.0D, true);
-        double noise1;
-        if (noise0 < 0.0D)
-        {
-            noise1 = -noise0 * 0.3D;
-        }
-        else
-        {
-            noise1 = noise0;
-        }
-
-        double noise2 = noise1 * 24.575625D - 2.0D;
-        return noise2 < 0.0D ? noise2 * 0.009486607142857142D : Math.min(noise2, 1.0D) * 0.006640625D;
+        return (1 + (depth + densityOffset) / densityFactor) * (cellCountY / 2.0D);
     }
 }

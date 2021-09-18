@@ -5,12 +5,13 @@
 
 package com.alcatrazescapee.hexlands.util;
 
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
 
 /**
  * See https://www.redblobgames.com/grids/hexagons/
+ * Axial / Cube coordinates: q = x, r = z
  */
-public final class Hex
+public record Hex(int q, int r, double size)
 {
     private static final double SQRT_3 = 1.7320508075688772;
 
@@ -160,16 +161,6 @@ public final class Hex
         return (1d / 2d) * (qr + rs + sq);
     }
 
-    private final int q, r; // Axial / Cube coordinates: q = x, r = z
-    private final double size;
-
-    public Hex(int q, int r, double size)
-    {
-        this.q = q;
-        this.r = r;
-        this.size = size;
-    }
-
     /**
      * Calculates the center of this hex in block coordinates {@code (x, z)}.
      */
@@ -198,16 +189,6 @@ public final class Hex
         final double fq = blockToHexQ(x, size);
         final double fr = blockToHexR(x, z, size);
         return Hex.adjacent(q, r, fq, fr, size);
-    }
-
-    public int q()
-    {
-        return q;
-    }
-
-    public int r()
-    {
-        return r;
     }
 
     public double x()

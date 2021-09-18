@@ -5,29 +5,29 @@
 
 package com.alcatrazescapee.hexlands.world;
 
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryLookupCodec;
-import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.provider.BiomeProvider;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Registry;
+import net.minecraft.resources.RegistryLookupCodec;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.BiomeSource;
 
 import com.alcatrazescapee.hexlands.util.Hex;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-public class HexBiomeSource extends BiomeProvider
+public class HexBiomeSource extends BiomeSource
 {
     public static final Codec<HexBiomeSource> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-        BiomeProvider.CODEC.fieldOf("biome_source").forGetter(c -> c.parent),
+        BiomeSource.CODEC.fieldOf("biome_source").forGetter(c -> c.parent),
         RegistryLookupCodec.create(Registry.BIOME_REGISTRY).forGetter(c -> c.biomeRegistry),
         HexSettings.CODEC.forGetter(c -> c.settings)
     ).apply(instance, HexBiomeSource::new));
 
-    protected final BiomeProvider parent;
+    protected final BiomeSource parent;
     protected final Registry<Biome> biomeRegistry;
     protected final HexSettings settings;
 
-    public HexBiomeSource(BiomeProvider parent, Registry<Biome> biomeRegistry, HexSettings settings)
+    public HexBiomeSource(BiomeSource parent, Registry<Biome> biomeRegistry, HexSettings settings)
     {
         super(parent.possibleBiomes());
 
@@ -43,7 +43,7 @@ public class HexBiomeSource extends BiomeProvider
     }
 
     @Override
-    protected Codec<? extends BiomeProvider> codec()
+    protected Codec<? extends BiomeSource> codec()
     {
         return CODEC;
     }

@@ -7,12 +7,12 @@ package com.alcatrazescapee.hexlands;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.Biomes;
-import net.minecraft.world.gen.GenerationStage;
-import net.minecraft.world.gen.feature.Features;
+import net.minecraft.core.Registry;
+import net.minecraft.data.worldgen.Features;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.Biomes;
+import net.minecraft.world.level.levelgen.GenerationStep;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.world.BiomeLoadingEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
@@ -60,9 +60,9 @@ public class HexLands
 
     private void onBiomeLoad(BiomeLoadingEvent event)
     {
-        if (HexLandsConfig.COMMON.addEndSpikesToEndBiomes.get() && event.getName() != null && event.getCategory() == Biome.Category.THEEND && !Biomes.THE_END.location().equals(event.getName()))
+        if (HexLandsConfig.COMMON.addEndSpikesToEndBiomes.get() && event.getName() != null && event.getCategory() == Biome.BiomeCategory.THEEND && !Biomes.THE_END.location().equals(event.getName()))
         {
-            event.getGeneration().addFeature(GenerationStage.Decoration.SURFACE_STRUCTURES, Features.END_SPIKE);
+            event.getGeneration().addFeature(GenerationStep.Decoration.SURFACE_STRUCTURES, Features.END_SPIKE);
         }
     }
 }

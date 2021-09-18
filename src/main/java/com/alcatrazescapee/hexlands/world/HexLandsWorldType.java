@@ -6,31 +6,27 @@
 package com.alcatrazescapee.hexlands.world;
 
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
 import java.util.Optional;
 import java.util.function.Supplier;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import net.minecraft.util.registry.DynamicRegistries;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.SimpleRegistry;
-import net.minecraft.world.Dimension;
-import net.minecraft.world.DimensionType;
-import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.provider.BiomeProvider;
-import net.minecraft.world.biome.provider.EndBiomeProvider;
-import net.minecraft.world.biome.provider.NetherBiomeProvider;
-import net.minecraft.world.biome.provider.OverworldBiomeProvider;
-import net.minecraft.world.gen.ChunkGenerator;
-import net.minecraft.world.gen.DimensionSettings;
-import net.minecraft.world.gen.settings.DimensionGeneratorSettings;
+import net.minecraft.core.MappedRegistry;
+import net.minecraft.core.Registry;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.BiomeSource;
+import net.minecraft.world.level.biome.OverworldBiomeSource;
+import net.minecraft.world.level.chunk.ChunkGenerator;
+import net.minecraft.world.level.dimension.DimensionType;
+import net.minecraft.world.level.dimension.LevelStem;
+import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
+import net.minecraft.world.level.levelgen.WorldGenSettings;
 import net.minecraftforge.common.ForgeConfig;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.common.world.ForgeWorldType;
 import net.minecraftforge.fml.ModList;
-import net.minecraftforge.fml.RegistryObject;
-import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
+import net.minecraftforge.fmllegacy.RegistryObject;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 
@@ -47,9 +43,6 @@ public class HexLandsWorldType
     public static final RegistryObject<ForgeWorldType> HEX_LANDS_OVERWORLD_ONLY = register("hexlands_overworld_only", () -> new Impl(true));
 
     private static final Logger LOGGER = LogManager.getLogger();
-
-    private static final Method DEFAULT_NETHER_GENERATOR = ObfuscationReflectionHelper.findMethod(DimensionType.class, "func_242720_b", Registry.class, Registry.class, long.class); // defaultNetherGenerator
-    private static final Method DEFAULT_END_GENERATOR = ObfuscationReflectionHelper.findMethod(DimensionType.class, "func_242717_a", Registry.class, Registry.class, long.class); // defaultEndGenerator
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     public static void setDefault()
@@ -75,13 +68,13 @@ public class HexLandsWorldType
         }
 
         @Override
-        public ChunkGenerator createChunkGenerator(Registry<Biome> biomeRegistry, Registry<DimensionSettings> dimensionSettingsRegistry, long seed)
+        public ChunkGenerator createChunkGenerator(Registry<Biome> biomeRegistry, Registry<NoiseGeneratorSettings> noiseSettingsRegistry, long seed)
         {
-            return createOverworldChunkGenerator(biomeRegistry, dimensionSettingsRegistry, seed);
+            return createOverworldChunkGenerator(biomeRegistry, noiseSettingsRegistry, seed);
         }
 
         @Override
-        public DimensionGeneratorSettings createSettings(DynamicRegistries registryAccess, long seed, boolean generateStructures, boolean bonusChest, String generatorSettings)
+        public WorldGenSettings createSettings(RegistryAccess registryAccess, long seed, boolean generateStructures, boolean bonusChest, String generatorSettings)
         {
             if (overworldOnly)
             {
@@ -90,62 +83,44 @@ public class HexLandsWorldType
 
             final Registry<Biome> biomeRegistry = registryAccess.registryOrThrow(Registry.BIOME_REGISTRY);
             final Registry<DimensionType> dimensionTypeRegistry = registryAccess.registryOrThrow(Registry.DIMENSION_TYPE_REGISTRY);
-            final Registry<DimensionSettings> dimensionSettingsRegistry = registryAccess.registryOrThrow(Registry.NOISE_GENERATOR_SETTINGS_REGISTRY);
+            final Registry<NoiseGeneratorSettings> noiseSettingsRegistry = registryAccess.registryOrThrow(Registry.NOISE_GENERATOR_SETTINGS_REGISTRY);
 
-            final ChunkGenerator overworld = createChunkGenerator(biomeRegistry, dimensionSettingsRegistry, seed, generatorSettings);
-            final ChunkGenerator nether = createNetherChunkGenerator(biomeRegistry, dimensionSettingsRegistry, seed);
-            final ChunkGenerator end = createEndChunkGenerator(biomeRegistry, dimensionSettingsRegistry, seed);
+            final ChunkGenerator overworld = createChunkGenerator(biomeRegistry, noiseSettingsRegistry, seed, generatorSettings);
+            final ChunkGenerator nether = createNetherChunkGenerator(biomeRegistry, noiseSettingsRegistry, seed);
+            final ChunkGenerator end = createEndChunkGenerator(biomeRegistry, noiseSettingsRegistry, seed);
 
-            final SimpleRegistry<Dimension> dimensions = new SimpleRegistry<>(Registry.LEVEL_STEM_REGISTRY, Lifecycle.experimental());
-            dimensions.register(Dimension.NETHER, new Dimension(() -> dimensionTypeRegistry.getOrThrow(DimensionType.NETHER_LOCATION), nether), Lifecycle.stable());
-            dimensions.register(Dimension.END, new Dimension(() -> dimensionTypeRegistry.getOrThrow(DimensionType.END_LOCATION), end), Lifecycle.stable());
 
-            return new DimensionGeneratorSettings(seed, generateStructures, bonusChest, DimensionGeneratorSettings.withOverworld(dimensionTypeRegistry, dimensions, overworld));
+            final MappedRegistry<LevelStem> levels = new MappedRegistry<>(Registry.LEVEL_STEM_REGISTRY, Lifecycle.experimental());
+            levels.register(LevelStem.NETHER, new LevelStem(() -> dimensionTypeRegistry.getOrThrow(DimensionType.NETHER_LOCATION), nether), Lifecycle.stable());
+            levels.register(LevelStem.END, new LevelStem(() -> dimensionTypeRegistry.getOrThrow(DimensionType.END_LOCATION), end), Lifecycle.stable());
+
+            return new WorldGenSettings(seed, generateStructures, bonusChest, WorldGenSettings.withOverworld(dimensionTypeRegistry, levels, overworld));
         }
 
-        private ChunkGenerator createOverworldChunkGenerator(Registry<Biome> biomeRegistry, Registry<DimensionSettings> dimensionSettingsRegistry, long seed)
+        private ChunkGenerator createOverworldChunkGenerator(Registry<Biome> biomeRegistry, Registry<NoiseGeneratorSettings> noiseSettingsRegistry, long seed)
         {
-            final BiomeProvider overworld =
-                getModdedBiomeSource(HexLandsConfig.COMMON.useBoPOverworld.get(), "biomesoplenty", "biomesoplenty.common.world.BOPBiomeProvider", new Class<?>[] {long.class, Registry.class}, seed, biomeRegistry)
-                    .orElseGet(() -> new OverworldBiomeProvider(seed, false, false, biomeRegistry));
+            final BiomeSource overworld = getModdedBiomeSource(HexLandsConfig.COMMON.useBoPOverworld.get(), "biomesoplenty", "biomesoplenty.common.world.BOPBiomeProvider", new Class<?>[] {long.class, Registry.class}, seed, biomeRegistry)
+                    .orElseGet(() -> new OverworldBiomeSource(seed, false, false, biomeRegistry));
             final HexBiomeSource hex = new HexBiomeSource(overworld, biomeRegistry, HexSettings.OVERWORLD);
-            return new HexChunkGenerator(hex, () -> dimensionSettingsRegistry.getOrThrow(DimensionSettings.OVERWORLD), seed);
+            return new HexChunkGenerator(hex, seed, () -> noiseSettingsRegistry.getOrThrow(NoiseGeneratorSettings.OVERWORLD));
         }
 
-        private ChunkGenerator createNetherChunkGenerator(Registry<Biome> biomeRegistry, Registry<DimensionSettings> dimensionSettingsRegistry, long seed)
+        private ChunkGenerator createNetherChunkGenerator(Registry<Biome> biomeRegistry, Registry<NoiseGeneratorSettings> noiseSettingsRegistry, long seed)
         {
-            final BiomeProvider nether =
-                getModdedBiomeSource(HexLandsConfig.COMMON.useBoPNether.get(), "biomesoplenty", "biomesoplenty.common.world.BOPNetherBiomeProvider", new Class<?>[] {long.class, Registry.class}, seed, biomeRegistry)
-                    .orElseGet(() -> getDefaultChunkGenerator(DEFAULT_NETHER_GENERATOR, biomeRegistry, dimensionSettingsRegistry, seed).map(ChunkGenerator::getBiomeSource)
-                        .orElseGet(() -> NetherBiomeProvider.Preset.NETHER.biomeSource(biomeRegistry, seed)));
+            final BiomeSource nether = getModdedBiomeSource(HexLandsConfig.COMMON.useBoPNether.get(), "biomesoplenty", "biomesoplenty.common.world.BOPNetherBiomeProvider", new Class<?>[] {long.class, Registry.class}, seed, biomeRegistry)
+                .orElseGet(() -> DimensionType.defaultNetherGenerator(biomeRegistry, noiseSettingsRegistry, seed).getBiomeSource());
             final HexBiomeSource hex = new HexBiomeSource(nether, biomeRegistry, HexSettings.NETHER);
-            return new HexChunkGenerator(hex, () -> dimensionSettingsRegistry.getOrThrow(DimensionSettings.NETHER), seed);
+            return new HexChunkGenerator(hex, seed, () -> noiseSettingsRegistry.getOrThrow(NoiseGeneratorSettings.NETHER));
         }
 
-        private ChunkGenerator createEndChunkGenerator(Registry<Biome> biomeRegistry, Registry<DimensionSettings> dimensionSettingsRegistry, long seed)
+        private ChunkGenerator createEndChunkGenerator(Registry<Biome> biomeRegistry, Registry<NoiseGeneratorSettings> noiseSettingsRegistry, long seed)
         {
-            final BiomeProvider end =
-                getDefaultChunkGenerator(DEFAULT_END_GENERATOR, biomeRegistry, dimensionSettingsRegistry, seed).map(ChunkGenerator::getBiomeSource)
-                    .orElseGet(() -> new EndBiomeProvider(biomeRegistry, seed));
+            final BiomeSource end = DimensionType.defaultEndGenerator(biomeRegistry, noiseSettingsRegistry, seed).getBiomeSource();
             final HexBiomeSource hex = HexLandsConfig.COMMON.preserveMainEndIsland.get() ? new HexEndBiomeSource(end, biomeRegistry, HexSettings.END) : new HexBiomeSource(end, biomeRegistry, HexSettings.END);
-            return new HexChunkGenerator(hex, () -> dimensionSettingsRegistry.getOrThrow(DimensionSettings.END), seed);
+            return new HexChunkGenerator(hex, seed, () -> noiseSettingsRegistry.getOrThrow(NoiseGeneratorSettings.END));
         }
 
-        private Optional<ChunkGenerator> getDefaultChunkGenerator(Method defaultMethod, Object... params)
-        {
-            try
-            {
-                return Optional.of((ChunkGenerator) defaultMethod.invoke(null, params));
-            }
-            catch (Exception e)
-            {
-                LOGGER.warn("Failed to get default chunk generator: {}", e.getMessage());
-                LOGGER.debug("Exception", e);
-                return Optional.empty();
-            }
-        }
-
-        private Optional<BiomeProvider> getModdedBiomeSource(boolean configOption, String predicateModId, String className, Class<?>[] constructorTypes, Object... constructorParams)
+        private Optional<BiomeSource> getModdedBiomeSource(boolean configOption, String predicateModId, String className, Class<?>[] constructorTypes, Object... constructorParams)
         {
             if (!configOption)
             {
@@ -160,12 +135,12 @@ public class HexLandsWorldType
             {
                 final Class<?> cls = Class.forName(className);
                 final Constructor<?> ctor = cls.getConstructor(constructorTypes);
-                final BiomeProvider biomeSource = (BiomeProvider) ctor.newInstance(constructorParams);
+                final BiomeSource biomeSource = (BiomeSource) ctor.newInstance(constructorParams);
                 return Optional.of(biomeSource);
             }
             catch (Exception e)
             {
-                LOGGER.warn("Unable to find biome source from mod {}: {}", predicateModId, e.getMessage());
+                LOGGER.warn("Unable to find biome source from mod {}: {}. Please inform HexLands about this!", predicateModId, e.getMessage());
                 LOGGER.debug("Exception", e);
                 return Optional.empty();
             }
