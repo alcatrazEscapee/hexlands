@@ -90,7 +90,7 @@ dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
 
     runtimeOnly fg.deobf("com.github.alcatrazEscapee:cyanide:${cyanide_version}") { transitive = false }
-    runtimeOnly fg.deobf("libs:BiomesOPlenty-1.17.1:14.0.0.36") // File: libs/BiomesOPlenty-1.17.1-14.0.0.36.jar
+    // runtimeOnly fg.deobf("libs:BiomesOPlenty-1.17.1:14.0.0.36") // File: libs/BiomesOPlenty-1.17.1-14.0.0.36.jar
 
     testImplementation 'org.quicktheories:quicktheories:0.26'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.3.1'
