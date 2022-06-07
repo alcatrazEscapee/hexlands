@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "hexlands",
+  "version": "${version}",
+  "name": "HexLands",
+  "description": "This is an example description! Tell everyone what your mod is about!",
+  "authors": [
+    "AlcatrazEscapee"
+  ],
+  "contact": {
+    "sources": "https://github.com/alcatrazEscapee/hexlands"
+  },
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.alcatrazescapee.hexlands.FabricHexLands"
+    ]
+  },
+  "mixins": [
+    "hexlands.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.13",
+    "fabric": "*",
+    "minecraft": "1.18.x",
+    "java": ">=17"
+  }
+}
