@@ -10,6 +10,6 @@
   "injectors": {
     "defaultRequire": 1
   },
-  "refmap": "hexlands.refmap.json"
+  "refmap": "hexlands.mixins.json"
 }
   
