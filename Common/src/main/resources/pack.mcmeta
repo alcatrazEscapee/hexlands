@@ -1,6 +1,6 @@
 {
     "pack": {
-        "description": "HexLands Resources",
-        "pack_format": 9
+        "description": "${mod_name}",
+        "pack_format": 8
     }
 }

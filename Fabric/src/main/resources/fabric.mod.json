@@ -14,9 +14,6 @@
   "license": "MIT",
   "environment": "*",
   "entrypoints": {
-    "main": [
-      "com.alcatrazescapee.hexlands.FabricHexLands"
-    ],
     "client": [
       "com.alcatrazescapee.hexlands.FabricHexLandsClient"
     ]
@@ -27,7 +24,6 @@
   ],
   "depends": {
     "fabricloader": ">=0.13",
-    "fabric": "*",
     "minecraft": "1.18.x",
     "java": ">=17"
   },

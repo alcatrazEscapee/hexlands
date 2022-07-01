@@ -53,14 +53,10 @@ public record HexWorldPreset(boolean overworldOnly)
         final LevelStem defaultNether = defaultDimensions.getOrThrow(LevelStem.NETHER);
         final LevelStem defaultEnd = defaultDimensions.getOrThrow(LevelStem.END);
 
-        final BiomeSource endBiomeSource = Config.INSTANCE.preserveMainEndIsland.get() ?
-            new HexEndBiomeSource(registryAccess.registryOrThrow(Registry.BIOME_REGISTRY), seed) :
-            defaultEnd.generator().getBiomeSource();
-
         final WritableRegistry<LevelStem> dimensions = new MappedRegistry<>(Registry.LEVEL_STEM_REGISTRY, Lifecycle.experimental(), null);
 
         dimensions.register(LevelStem.NETHER, new LevelStem(defaultNether.typeHolder(), new HexChunkGenerator(structureSets, noiseParameters, defaultNether.generator().getBiomeSource(), seed, noiseGeneratorSettings.getOrCreateHolder(NoiseGeneratorSettings.NETHER), HexSettings.NETHER)), Lifecycle.stable());
-        dimensions.register(LevelStem.END, new LevelStem(defaultEnd.typeHolder(), new HexChunkGenerator(structureSets, noiseParameters, endBiomeSource, seed, noiseGeneratorSettings.getOrCreateHolder(NoiseGeneratorSettings.END), HexSettings.END)), Lifecycle.stable());
+        dimensions.register(LevelStem.END, new LevelStem(defaultEnd.typeHolder(), new HexChunkGenerator(structureSets, noiseParameters, defaultEnd.generator().getBiomeSource(), seed, noiseGeneratorSettings.getOrCreateHolder(NoiseGeneratorSettings.END), HexSettings.END)), Lifecycle.stable());
 
         return new WorldGenSettings(seed, generateStructures, bonusChest, WorldGenSettings.withOverworld(dimensionTypeRegistry, dimensions, createChunkGenerator(registryAccess, seed)));
     }

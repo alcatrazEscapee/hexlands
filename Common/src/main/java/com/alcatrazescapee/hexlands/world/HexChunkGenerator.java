@@ -68,11 +68,6 @@ public class HexChunkGenerator extends ChunkGenerator
 
         this.noiseChunkGenerator = new NoiseBasedChunkGenerator(structureSets, noiseParameters, biomeSource, seed, settings);
 
-        if (biomeSource instanceof HexEndBiomeSource endBiomeSource)
-        {
-            endBiomeSource.applySettings(hexSettings);
-        }
-
         this.noiseParameters = noiseParameters;
         this.settings = settings;
         this.seed = seed;

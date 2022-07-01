@@ -11,11 +11,14 @@ import com.alcatrazescapee.hexlands.world.HexWorldPreset;
 
 public final class FabricHexLandsClient implements ClientModInitializer
 {
+    public static final WorldPresetInstance HEXLANDS = new WorldPresetInstance(HexWorldPreset.HEXLANDS, "hexlands");
+    public static final WorldPresetInstance HEXLANDS_OVERWORLD_ONLY = new WorldPresetInstance(HexWorldPreset.HEXLANDS_OVERWORLD_ONLY, "hexlands_overworld_only");
+
     @Override
     public void onInitializeClient()
     {
-        WorldPresetAccessor.accessor$PRESETS().add(new WorldPresetInstance(HexWorldPreset.HEXLANDS, "hexlands"));
-        WorldPresetAccessor.accessor$PRESETS().add(new WorldPresetInstance(HexWorldPreset.HEXLANDS_OVERWORLD_ONLY, "hexlands_overworld_only"));
+        WorldPresetAccessor.accessor$PRESETS().add(HEXLANDS);
+        WorldPresetAccessor.accessor$PRESETS().add(HEXLANDS_OVERWORLD_ONLY);
     }
 
     static class WorldPresetInstance extends WorldPreset
@@ -24,7 +27,7 @@ public final class FabricHexLandsClient implements ClientModInitializer
 
         WorldPresetInstance(HexWorldPreset preset, String name)
         {
-            super(name);
+            super(HexLands.MOD_ID + "." + name);
             this.preset = preset;
         }
 

@@ -15,6 +15,8 @@ dependencies {
         parchment("org.parchmentmc.data:parchment-1.18.2:2022.06.05@zip")
     }
 
+    modImplementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
+
     implementation project(":Common")
     implementation 'org.jetbrains:annotations:23.0.0'
 }
