@@ -1,15 +1,13 @@
 package com.alcatrazescapee.hexlands;
 
-import com.mojang.logging.LogUtils;
 import net.fabricmc.api.ModInitializer;
-import org.slf4j.Logger;
 
-public final class FabricHexLands implements ModInitializer {
-
-    private static final Logger LOGGER = LogUtils.getLogger();
-
+public final class FabricHexLands implements ModInitializer
+{
     @Override
-    public void onInitialize() {
-        LOGGER.info("Hello Fabric world!");
+    public void onInitialize()
+    {
+        HexLands.init();
+        HexLands.registerCodecs();
     }
 }

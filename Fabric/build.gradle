@@ -15,18 +15,13 @@ dependencies {
         parchment("org.parchmentmc.data:parchment-1.18.2:2022.06.05@zip")
     }
 
-    modImplementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_version}"
-
-    modImplementation "me.zeroeightsix:fiber:0.23.0-2"
-    include "me.zeroeightsix:fiber:0.23.0-2"
-
     implementation project(":Common")
     implementation 'org.jetbrains:annotations:23.0.0'
 }
 
 loom {
     mixin.defaultRefmapName = "${mod_id}.refmap.json"
+    accessWidenerPath = file("src/main/resources/${mod_id}.accesswidener")
 
     runs {
         client {

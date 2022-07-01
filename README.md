@@ -9,23 +9,6 @@ This mod is an updated and rewritten version of the original [Hex Lands](https:/
 - Automatic compatibility with mods that add biomes to the overworld or other world generation.
 - Many options for world customization via data packs.
 
-### World Types
-
-Hex Lands adds two world types. By default, it will overwrite the Forge config option for world types and set it to `hexlands:hexlands`. This can be disabled in the `hexlands-common.toml` config.
-
-- `hexlands:hexlands` This is the default Hex Lands world type. It will use hex based terrain generation in the overworld and nether.
-- `hexlands:hexlands_overworld_only` This will only use hex based terrain generation in the overworld.
-
-To set the world type, consult the option in the `forge-common.toml` config file:
-
-```toml
-# Defines a default world type to use. The vanilla default world type is represented by 'default'.
-# The modded world types are registry names which should include the registry namespace, such as 'examplemod:example_world_type'.
-defaultWorldType = "hexlands:hexlands"
-```
-
-Alternatively, these two world types can be used in the `level-type` field of `server.properties`.
-
 ### Configuration (Data Packs)
 
 All of Hex Lands's world generation can be used by datapacks. If you're not familiar with world gen datapacks and custom dimensions, the following articles are useful to get up to speed:
@@ -38,18 +21,17 @@ In order to change a dimension to use hex based generation, you need to override
 **Note**: Anywhere below where the term "default value" is used does not mean the field is not required! It means that is the value used by the Hex Land's generation presets.
 
 - `type` is a string identifying what chunk generator to use. Must be a HexLands compatible biome source (Either `hexlands:hexlands` or `hexlands:end_hexlands`).
-- `seed` is a `long`. It is the seed of the world.
+- `seed` is an integer. It is the seed of the world.
 - `settings` is a [Noise Settings](https://minecraft.fandom.com/wiki/Custom_world_generation#Noise_settings) used by the dimension. The default value is `"minecraft:overworld"`.
-- `biome_source` is an object representing the biomes in the world. It must be a Hex Lands biome source, with the following fields:
-    - `type` is a string identifying what biome source to use. Must be `hexlands:hexlands`.
-    - `biome_source` is the biome source used by the hexlands biomes. It can be any biome source in vanilla. The default one used is `minecraft:vanilla_layered`. This will include modded biomes if they add biomes to the normal overworld.
-    - `biome_scale` is a double between `0.01` and `1000`. It represents the scale of the biomes in hexes. Lower values will make biomes closer together, larger values will create more adjacent hexes of the same biome. The default in the overworld is `8`, the default in the nether is `4`.
-    - `hex_size` is a double between `1` and `1000` representing the size of a single hex. The default is `40`.
+- `hex_settings` is an object with parameters defining how the hexagonal grid works. It can have any of the following fields:
+    - `biome_scale` (Default: 8) is the scale at which biomes are sampled to create hexes. Higher values create more random biome layouts.
+    - `hex_size` (Default: 40) is the size of an individual hex.
     - `hex_border_threshold` is a double between `0` and `1` representing how much of a hex should be covered by the border. Larger values will lead to thinner borders. The default is `0.92`.
-    - `border_state` is a block state representing the border state. It must be specified in a block state format, with a `Name` and `Properties` keys. The default in the overworld is `minecraft:stone_bricks`, the default in the nether is `minecraft:nether_bricks`.
-    - `border_extends_to_bedrock` is a boolean. If true, the border will extend all the way down to bedrock, rather than only covering the surface material. By default, this is `false` in the overworld and `true` in the nether.
-    - `windowed_border` is a boolean. If true, the border will be a "window" from both the top and the bottom of the world, otherwise, it will approximate the height of the biome. By default, this is `false` in the overworld and `true` in the nether.
-    - `no_border` is a boolean. If true, there will be no border, and the border space will completely consist of air.
+    - `top_border` and `bottom_border` are both border settings which define how the top and bottom borders of the world are built. The borders between hexes consist of a bottom border, air, and a top border. Each border can be empty, which means the border consists of air, or have the following fields:
+        - `min_height`: The minimum height of the border.
+        - `max_height`: The maximum height of the border.
+        - `state`: A block state to generate as the border state.
+- `biome_source` is the biome source, as in vanilla.
 
 #### Example
 
@@ -82,15 +64,6 @@ In order to change a dimension to use hex based generation, you need to override
   }
 }
 ```
-
-#### Biome Sources
-
-Hex Lands adds two biome sources:
-
-- `hexlands:hexlands` This is the default biome source, used in the Overworld, and Nether (and End, if the config option `preserveMainEndIsland` is set to `false`).
-- `hexlands:end_hexlands` This is a special biome source, meant for use in the End. It has a couple modifications:
-    - This will use the island noise parameter in the chunk generator. This preserves both the main End island, and also the surrounding void.
-    - In addition, the biome inside said center region will use the origin biome of the world, and be unaffected by the otherwise applied `biome_scale` parameter. This also has the effect of keeping the central End island to be the same as in vanilla, and unaffected by HexLands.
 
 ### Gallery
 
