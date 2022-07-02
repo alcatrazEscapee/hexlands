@@ -6,11 +6,12 @@ plugins {
 archivesBaseName = "${mod_name}-common-${minecraft_version}"
 
 minecraft {
+    accessWideners(project.file("src/main/resources/hexlands.common.accesswidener"))
     version(minecraft_version)
 }
 
 dependencies {
-     compileOnly group:'org.spongepowered', name:'mixin', version:'0.8.5'
+    compileOnly group:'org.spongepowered', name:'mixin', version:'0.8.5'
 
     testImplementation 'org.quicktheories:quicktheories:0.26'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.3.1'
