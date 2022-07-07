@@ -23,7 +23,7 @@ import com.alcatrazescapee.hexlands.world.HexWorldPreset;
 public abstract class CreateWorldScreenMixin
 {
     @Dynamic("Targets the new WorldGenSettingsComponent(...)")
-    @Redirect(method = "createFresh", at = @At(value = "NEW", target = "Lnet/minecraft/client/gui/screens/worldselection/WorldGenSettingsComponent;"), require = 1)
+    @Redirect(method = "createFresh", at = @At(value = "NEW", target = "Lnet/minecraft/client/gui/screens/worldselection/WorldGenSettingsComponent;"), require = 0)
     private static WorldGenSettingsComponent useHexLandsAsDefault(RegistryAccess.Frozen registryAccess, WorldGenSettings settings, Optional<WorldPreset> preset, OptionalLong seed)
     {
         return preset.isPresent() && preset.get() == WorldPreset.NORMAL ?
