@@ -156,7 +156,7 @@ public class HexChunkGenerator extends NoiseBasedChunkGenerator
                 final Block block = chunk.getBlockState(cursor.setY(y)).getBlock();
                 if (block != Blocks.BEDROCK)
                 {
-                    chunk.setBlockState(cursor, placed.borderMinState, false);
+                    chunk.setBlockState(cursor, placed.borderMaxState, false);
                 }
             }
         });
@@ -234,7 +234,7 @@ public class HexChunkGenerator extends NoiseBasedChunkGenerator
             .orElse(maxY + 1);
 
         final BlockState minBorderState = hexSettings.bottomBorder().map(HexSettings.BorderSettings::state).orElse(Blocks.AIR.defaultBlockState());
-        final BlockState maxBorderState = hexSettings.bottomBorder().map(HexSettings.BorderSettings::state).orElse(Blocks.AIR.defaultBlockState());
+        final BlockState maxBorderState = hexSettings.topBorder().map(HexSettings.BorderSettings::state).orElse(Blocks.AIR.defaultBlockState());
 
         return new PlacedHex(hex, biome, preliminaryHeight, minY, maxY, borderMinY, borderMaxY, minBorderState, maxBorderState);
     }
