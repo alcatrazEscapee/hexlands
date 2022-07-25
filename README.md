@@ -20,7 +20,7 @@ In order to change a dimension to use hex based generation, you need to override
 
 **Note**: Anywhere below where the term "default value" is used does not mean the field is not required! It means that is the value used by the Hex Land's generation presets.
 
-- `type` is a string identifying what chunk generator to use.
+- `type` is a string identifying what chunk generator to use. It should be `hexlands:hexlands`.
 - `seed` is an integer. It is the seed of the world.
 - `settings` is a [Noise Settings](https://minecraft.fandom.com/wiki/Custom_world_generation#Noise_settings) used by the dimension. The default value is `"minecraft:overworld"`.
 - `hex_settings` is an object with parameters defining how the hexagonal grid works. It can have any of the following fields:
@@ -30,8 +30,45 @@ In order to change a dimension to use hex based generation, you need to override
     - `top_border` and `bottom_border` are both border settings which define how the top and bottom borders of the world are built. The borders between hexes consist of a bottom border, air, and a top border. If not present, this section of the border will consist entirely of air. If present, it must have the following fields:
         - `min_height`: The minimum height of the border.
         - `max_height`: The maximum height of the border.
-        - `state`: A block state to generate as the border state.
-- `biome_source` is the biome source, as in vanilla.
+        - `state`: A block state to generate as the border state. As in vanilla formats, this must be an object with a `Name` and `Properties` field. The `Properties` must be an object containing **all** possible block state properties in key-value pairs, and the `Name` field must be the name of the block.
+- `biome_source` is the biome source, as in vanilla. It can be a known preset, such as `"minecraft:overworld"`, or `"minecraft:nether"`, or it can be a JSON object following the vanilla biome source format (an example of [vanilla's overworld biome source in full](https://github.com/misode/vanilla-worldgen/blob/af187cddb2d4a808b17c1d45c17d75dbfc218ad3/dimension/overworld.json)).
+- `forge:use_server_seed` is a boolean (Forge only). If `true`, then the `seed` parameter is ignored, and the seed is used from either the create world screen, or server.properties.
+
+### Example
+
+```json5
+// An example of overriding a vanilla dimension
+{
+  // The dimension type
+  "type": "minecraft:overworld",
+  "generator": {
+    // The type of the chunk generator
+    "type": "hexlands:hexlands",
+    "seed": 0,
+    "settings": "minecraft:overworld",
+    "hex_settings": {
+      "biome_scale": 8,
+      "hex_size": 40,
+      "hex_border_threshold": 0.92,
+      "bottom_border": {
+        "min_height": 62,
+        "max_height": 65,
+        "state": {
+          "Name": "minecraft:stone_bricks",
+          // Stone Bricks has no properties, so we have an empty object here. 
+          "Properties": {}
+        }
+      },
+      // No "top_border" field indicates the border should be just air, as is in the overworld
+    },
+    // This is a biome source object as declared in vanilla
+    // It can be either 'minecraft:overworld', or 'minecraft:nether' for the default overworld and nether biome sources
+    // Or, it can be a completely custom biome source - however this may be very long (the default vanilla biome source is ~300,000 lines long)
+    "biome_source": "minecraft:overworld",
+    "forge:use_server_seed": true
+  }
+}
+```
 
 ### Gallery
 
