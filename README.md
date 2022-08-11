@@ -58,13 +58,17 @@ In order to change a dimension to use hex based generation, you need to override
           // Stone Bricks has no properties, so we have an empty object here. 
           "Properties": {}
         }
-      },
+      }
       // No "top_border" field indicates the border should be just air, as is in the overworld
     },
     // This is a biome source object as declared in vanilla
-    // It can be either 'minecraft:overworld', or 'minecraft:nether' for the default overworld and nether biome sources
-    // Or, it can be a completely custom biome source - however this may be very long (the default vanilla biome source is ~300,000 lines long)
-    "biome_source": "minecraft:overworld",
+    // The fields will depend on the 'type'. A preset can be used, or a fully custom biome source.
+    // For references for biome sources in vanilla dimensions, see:
+    // https://github.com/misode/vanilla-worldgen/tree/af187cddb2d4a808b17c1d45c17d75dbfc218ad3/dimension
+    "biome_source": {
+      "type": "minecraft:multi_noise",
+      "preset": "minecraft:overworld"
+    },
     "forge:use_server_seed": true
   }
 }
