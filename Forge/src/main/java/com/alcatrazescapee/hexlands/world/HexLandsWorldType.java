@@ -34,7 +34,7 @@ public class HexLandsWorldType
         return WORLD_TYPES.register(name, () -> new ForgeWorldPreset(new Wrapper(preset)));
     }
 
-    record Wrapper(HexWorldPreset preset) implements ForgeWorldPreset.IChunkGeneratorFactory
+    record Wrapper(HexWorldPreset preset) implements ChunkGeneratorFactory
     {
         @Override
         public ChunkGenerator createChunkGenerator(RegistryAccess registryAccess, long seed, String generatorSettings)

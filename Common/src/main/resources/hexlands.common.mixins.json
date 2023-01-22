@@ -4,7 +4,7 @@
   "package": "com.alcatrazescapee.hexlands.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
-    "NoiseBasedChunkGeneratorAccessor"
+    "RandomStateAccessor"
   ],
   "client": [
   ],
