@@ -13,6 +13,8 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.WorldGenRegion;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.LevelHeightAccessor;
+import net.minecraft.world.level.NoiseColumn;
 import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeSource;
@@ -108,10 +110,10 @@ public class HexChunkGenerator extends NoiseBasedChunkGenerator
     }
 
     @Override
-    public CompletableFuture<ChunkAccess> fillFromNoise(Executor executor, Blender blender, RandomState state, StructureManager structureManager, ChunkAccess chunk)
+    public NoiseColumn getBaseColumn(int x, int z, LevelHeightAccessor heightAccessor, RandomState state)
     {
         HexRandomState.modify(state, settings.value(), hexSettings);
-        return super.fillFromNoise(executor, blender, state, structureManager, chunk);
+        return super.getBaseColumn(x, z, heightAccessor, state);
     }
 
     @Override
@@ -170,9 +172,9 @@ public class HexChunkGenerator extends NoiseBasedChunkGenerator
         final int quartX = QuartPos.fromBlock((int) (center.getX() / hexScale));
         final int quartZ = QuartPos.fromBlock((int) (center.getZ() / hexScale));
         final NoiseSettings noiseSettings = settings.value().noiseSettings();
-        final HexRandomState hexRandomState = HexRandomState.modify(state, settings.value(), hexSettings);
+        HexRandomState.modify(state, settings.value(), hexSettings);
         final double preliminaryHeight = noiseChunk != null ? noiseChunk.preliminarySurfaceLevel((int) (center.getX() / hexScale), (int) (center.getZ() / hexScale)) : backupSurfaceY;
-        final Holder<Biome> biome = biomeSource.getNoiseBiome(quartX, QuartPos.fromBlock((int) preliminaryHeight), quartZ, hexRandomState.hexSampler());
+        final Holder<Biome> biome = biomeSource.getNoiseBiome(quartX, QuartPos.fromBlock((int) preliminaryHeight), quartZ, state.sampler());
         final RandomSource random = new XoroshiroRandomSource(hex.q() * 178293412341L, hex.r() * 7520351231L);
 
         final int minY = noiseSettings.minY();

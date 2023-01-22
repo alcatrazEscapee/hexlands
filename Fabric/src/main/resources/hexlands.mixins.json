@@ -6,8 +6,6 @@
   "mixins": [
   ],
   "client": [
-    "CreateWorldScreenMixin",
-    "WorldPresetAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

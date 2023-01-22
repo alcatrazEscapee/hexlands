@@ -1,13 +1,10 @@
 package com.alcatrazescapee.hexlands.world;
 
-import java.util.concurrent.ExecutionException;
 import java.util.function.UnaryOperator;
-import com.alcatrazescapee.hexlands.mixin.RandomStateAccessor;
+import com.alcatrazescapee.hexlands.util.RandomStateAccessor;
 import com.alcatrazescapee.hexlands.platform.XPlatform;
 import com.alcatrazescapee.hexlands.util.Hex;
 import com.alcatrazescapee.hexlands.util.HexSettings;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.KeyDispatchDataCodec;
@@ -19,16 +16,12 @@ import net.minecraft.world.level.levelgen.RandomState;
 
 public record HexRandomState(RandomState state, NoiseRouter hexRouter, Climate.Sampler hexSampler)
 {
-    private static final Cache<RandomState, HexRandomState> RANDOM_STATE_EXTENSIONS = CacheBuilder.newBuilder()
-        .concurrencyLevel(4)
-        .weakKeys()
-        .build();
 
-    public static HexRandomState modify(RandomState state, NoiseGeneratorSettings settings, HexSettings hexSettings)
+    public static void modify(RandomState state, NoiseGeneratorSettings settings, HexSettings hexSettings)
     {
         try
         {
-            return RANDOM_STATE_EXTENSIONS.get(state, () -> {
+            if (RandomStateAccessor.of(state).hexlands$requirePatching()) {
                 final DensityFunction.Visitor visitor = f -> {
                     if (XPlatform.INSTANCE.isNoiseDensityFunction(f))
                     {
@@ -66,15 +59,10 @@ public record HexRandomState(RandomState state, NoiseRouter hexRouter, Climate.S
                     settings.spawnTarget()
                 );
 
-                final RandomStateAccessor mutableState = (RandomStateAccessor) (Object) state;
-
-                mutableState.setRouter(hexRouter);
-                mutableState.setSampler(hexSampler);
-
-                return new HexRandomState(state, hexRouter, hexSampler);
-            });
+                RandomStateAccessor.of(state).hexlands$set(hexRouter, hexSampler);
+            }
         }
-        catch (ExecutionException e)
+        catch (Throwable e)
         {
             throw new RuntimeException("Failed to inject HexRandomState into RandomState", e);
         }
