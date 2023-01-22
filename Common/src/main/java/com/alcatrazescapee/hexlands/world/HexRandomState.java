@@ -63,6 +63,7 @@ interface HexRandomState
                                 hexRouter.ridges(),
                                 settings.spawnTarget()
                         );
+                        XPlatform.INSTANCE.patchSampler(hexSampler, state);
 
                         RandomStateAccessor.of(state).hexlands$set(hexRouter, hexSampler);
                     }

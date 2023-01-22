@@ -2,7 +2,9 @@ package com.alcatrazescapee.hexlands.platform;
 
 import java.util.ServiceLoader;
 
+import net.minecraft.world.level.biome.Climate;
 import net.minecraft.world.level.levelgen.DensityFunction;
+import net.minecraft.world.level.levelgen.RandomState;
 
 public interface XPlatform
 {
@@ -16,4 +18,6 @@ public interface XPlatform
     }
 
     boolean isNoiseDensityFunction(DensityFunction f);
+
+    void patchSampler(Climate.Sampler hexSampler, RandomState state);
 }
