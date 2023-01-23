@@ -4,6 +4,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import com.mojang.datafixers.util.Either;
+import com.mojang.serialization.DataResult;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
@@ -31,7 +32,14 @@ public record HexSettings(double biomeScale, double hexSize, double hexBorderThr
     public static final HexSettings NETHER = new HexSettings(4d, 40d, 0.92d, BorderSettings.of(100, 110, Blocks.NETHER_BRICKS), BorderSettings.of(31, 40, Blocks.NETHER_BRICKS));
     public static final HexSettings END = new HexSettings(4d, 40d, 0.92d, Optional.empty(), Optional.empty());
 
-    public static final Codec<HexSettings> CODEC = Codec.either(ResourceLocation.CODEC, OBJECT_CODEC).xmap(x -> x.map(s -> HexSettings.DEFAULTS.getOrDefault(s, OVERWORLD), s -> s), x -> Either.right(x));
+    public static final Codec<HexSettings> CODEC = Codec.either(ResourceLocation.CODEC, OBJECT_CODEC).flatXmap(x -> {
+        var settings = x.map(s -> HexSettings.DEFAULTS.get(s), s -> s);
+        if (settings == null)
+        {
+            return DataResult.error("Invalid hex settings resource location!");
+        }
+        return DataResult.success(settings);
+    }, x -> DataResult.success(Either.right(x)));
 
     public record BorderSettings(int minHeight, int maxHeight, BlockState state)
     {
@@ -56,7 +64,8 @@ public record HexSettings(double biomeScale, double hexSize, double hexBorderThr
         }
     }
 
-    static {
+    static
+    {
         DEFAULTS.put(new ResourceLocation("overworld"), OVERWORLD);
         DEFAULTS.put(new ResourceLocation("nether"), NETHER);
         DEFAULTS.put(new ResourceLocation("the_end"), END);

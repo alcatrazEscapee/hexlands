@@ -14,52 +14,59 @@ import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
 import net.minecraft.world.level.levelgen.NoiseRouter;
 import net.minecraft.world.level.levelgen.RandomState;
 
-public record HexRandomState(RandomState state, NoiseRouter hexRouter, Climate.Sampler hexSampler)
+interface HexRandomState
 {
 
-    public static void modify(RandomState state, NoiseGeneratorSettings settings, HexSettings hexSettings)
+    static void modify(RandomState state, NoiseGeneratorSettings settings, HexSettings hexSettings)
     {
         try
         {
-            if (RandomStateAccessor.of(state).hexlands$requirePatching()) {
-                final DensityFunction.Visitor visitor = f -> {
-                    if (XPlatform.INSTANCE.isNoiseDensityFunction(f))
+            if (RandomStateAccessor.of(state).hexlands$requirePatching())
+            {
+                synchronized (state)
+                {
+                    if (RandomStateAccessor.of(state).hexlands$requirePatching())
                     {
-                        return sampleHexRelative(hexSettings, f);
+
+                        final DensityFunction.Visitor visitor = f -> {
+                            if (XPlatform.INSTANCE.isNoiseDensityFunction(f)) {
+                                return sampleHexRelative(hexSettings, f);
+                            }
+                            return f;
+                        };
+
+                        final NoiseRouter router = state.router();
+                        final NoiseRouter hexRouter = new NoiseRouter(
+                                router.barrierNoise(),
+                                router.fluidLevelFloodednessNoise(),
+                                router.fluidLevelSpreadNoise(),
+                                router.lavaNoise(),
+                                sampleHexCenter(hexSettings, router.temperature()),
+                                sampleHexCenter(hexSettings, router.vegetation()),
+                                sampleHexCenter(hexSettings, router.continents()),
+                                sampleHexCenter(hexSettings, router.erosion()),
+                                sampleHexCenter(hexSettings, router.depth()),
+                                sampleHexCenter(hexSettings, router.ridges()),
+                                router.initialDensityWithoutJaggedness().mapAll(visitor),
+                                router.finalDensity().mapAll(visitor),
+                                router.veinToggle(),
+                                router.veinRidged(),
+                                router.veinGap()
+                        );
+
+                        final Climate.Sampler hexSampler = new Climate.Sampler(
+                                hexRouter.temperature(),
+                                hexRouter.vegetation(),
+                                hexRouter.continents(),
+                                hexRouter.erosion(),
+                                hexRouter.depth(),
+                                hexRouter.ridges(),
+                                settings.spawnTarget()
+                        );
+
+                        RandomStateAccessor.of(state).hexlands$set(hexRouter, hexSampler);
                     }
-                    return f;
-                };
-
-                final NoiseRouter router = state.router();
-                final NoiseRouter hexRouter = new NoiseRouter(
-                    router.barrierNoise(),
-                    router.fluidLevelFloodednessNoise(),
-                    router.fluidLevelSpreadNoise(),
-                    router.lavaNoise(),
-                    sampleHexCenter(hexSettings, router.temperature()),
-                    sampleHexCenter(hexSettings, router.vegetation()),
-                    sampleHexCenter(hexSettings, router.continents()),
-                    sampleHexCenter(hexSettings, router.erosion()),
-                    sampleHexCenter(hexSettings, router.depth()),
-                    sampleHexCenter(hexSettings, router.ridges()),
-                    router.initialDensityWithoutJaggedness().mapAll(visitor),
-                    router.finalDensity().mapAll(visitor),
-                    router.veinToggle(),
-                    router.veinRidged(),
-                    router.veinGap()
-                );
-
-                final Climate.Sampler hexSampler = new Climate.Sampler(
-                    hexRouter.temperature(),
-                    hexRouter.vegetation(),
-                    hexRouter.continents(),
-                    hexRouter.erosion(),
-                    hexRouter.depth(),
-                    hexRouter.ridges(),
-                    settings.spawnTarget()
-                );
-
-                RandomStateAccessor.of(state).hexlands$set(hexRouter, hexSampler);
+                }
             }
         }
         catch (Throwable e)
