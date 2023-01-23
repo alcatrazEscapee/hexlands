@@ -1,8 +1,6 @@
 package com.alcatrazescapee.hexlands.world;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -13,6 +11,8 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.WorldGenRegion;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.LevelHeightAccessor;
+import net.minecraft.world.level.NoiseColumn;
 import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeSource;
@@ -20,7 +20,6 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
-import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.levelgen.*;
 import net.minecraft.world.level.levelgen.blending.Blender;
 import net.minecraft.world.level.levelgen.structure.StructureSet;
@@ -108,10 +107,10 @@ public class HexChunkGenerator extends NoiseBasedChunkGenerator
     }
 
     @Override
-    public CompletableFuture<ChunkAccess> fillFromNoise(Executor executor, Blender blender, RandomState state, StructureManager structureManager, ChunkAccess chunk)
+    public NoiseColumn getBaseColumn(int x, int z, LevelHeightAccessor level, RandomState state)
     {
         HexRandomState.modify(state, settings.value(), hexSettings);
-        return super.fillFromNoise(executor, blender, state, structureManager, chunk);
+        return super.getBaseColumn(x, z, level, state);
     }
 
     @Override
@@ -148,7 +147,6 @@ public class HexChunkGenerator extends NoiseBasedChunkGenerator
                 final Hex hex = Hex.blockToHex(x * hexScale, z * hexScale, hexSize);
                 final Hex adjacentHex = hex.adjacent(x * hexScale, z * hexScale);
 
-                final int y = chunk.getHeight(Heightmap.Types.OCEAN_FLOOR_WG, localX, localZ) + 1;
                 final PlacedHex placed = cachedBiomesByHex.computeIfAbsent(hex, k -> placeHex(k, state, noiseChunk, 0));
                 if (hex.radius(x * hexScale, z * hexScale) >= hexBorder)
                 {
