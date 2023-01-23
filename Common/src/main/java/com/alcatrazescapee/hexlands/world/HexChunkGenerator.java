@@ -98,10 +98,10 @@ public class HexChunkGenerator extends NoiseBasedChunkGenerator
     }
 
     @Override
-    public int getBaseHeight(int $$0, int $$1, Heightmap.Types $$2, LevelHeightAccessor $$3, RandomState state)
+    public int getBaseHeight(int x, int y, Heightmap.Types types, LevelHeightAccessor accessor, RandomState state)
     {
         HexRandomState.modify(state, settings.value(), hexSettings);
-        return super.getBaseHeight($$0, $$1, $$2, $$3, state);
+        return super.getBaseHeight(x, y, types, accessor, state);
     }
 
     @Override
