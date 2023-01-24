@@ -22,6 +22,6 @@ issueTrackerURL = "https://github.com/AlcatrazEscapee/HexLands/issues"
 [[dependencies.hexlands]]
     modId = "minecraft"
     mandatory = true
-    versionRange = "[1.19.1,1.19.2]"
+    versionRange = "[1.19.3,)"
     ordering = "AFTER"
     side = "BOTH"

@@ -66,6 +66,8 @@ public record HexRandomState(RandomState state, NoiseRouter hexRouter, Climate.S
                     settings.spawnTarget()
                 );
 
+                XPlatform.INSTANCE.copyFabricCachedClimateSamplerSeed(state.sampler(), hexSampler);
+
                 final RandomStateAccessor mutableState = (RandomStateAccessor) (Object) state;
 
                 mutableState.setRouter(hexRouter);

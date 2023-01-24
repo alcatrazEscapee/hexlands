@@ -1,18 +1,17 @@
 package com.alcatrazescapee.hexlands.world;
 
 import java.util.*;
+import java.util.function.Supplier;
 
+import com.google.common.base.Suppliers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.QuartPos;
-import net.minecraft.core.Registry;
-import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.WorldGenRegion;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.LevelHeightAccessor;
-import net.minecraft.world.level.NoiseColumn;
 import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeSource;
@@ -22,46 +21,41 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.levelgen.*;
 import net.minecraft.world.level.levelgen.blending.Blender;
-import net.minecraft.world.level.levelgen.structure.StructureSet;
 
 import com.alcatrazescapee.hexlands.util.Hex;
 import com.alcatrazescapee.hexlands.util.HexSettings;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.world.level.levelgen.synth.NormalNoise;
 import org.jetbrains.annotations.Nullable;
 
 public class HexChunkGenerator extends NoiseBasedChunkGenerator
 {
     public static final Codec<HexChunkGenerator> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-        RegistryOps.retrieveRegistry(Registry.STRUCTURE_SET_REGISTRY).forGetter(c -> c.structureSets),
-        RegistryOps.retrieveRegistry(Registry.NOISE_REGISTRY).forGetter(c -> c.noiseParameters),
         BiomeSource.CODEC.fieldOf("biome_source").forGetter(c -> c.biomeSource),
         NoiseGeneratorSettings.CODEC.fieldOf("settings").forGetter(c -> c.settings),
         HexSettings.CODEC.fieldOf("hex_settings").forGetter(c -> c.hexSettings)
     ).apply(instance, HexChunkGenerator::new));
 
-    private final Registry<NormalNoise.NoiseParameters> noiseParameters;
     private final Holder<NoiseGeneratorSettings> settings;
     private final HexSettings hexSettings;
 
-    private final Aquifer.FluidPicker stupidMojangGlobalFluidPicker;
+    private final Supplier<Aquifer.FluidPicker> stupidMojangGlobalFluidPicker;
 
-    public HexChunkGenerator(Registry<StructureSet> structureSets, Registry<NormalNoise.NoiseParameters> noiseParameters, BiomeSource biomeSource, Holder<NoiseGeneratorSettings> settings, HexSettings hexSettings)
+    public HexChunkGenerator(BiomeSource biomeSource, Holder<NoiseGeneratorSettings> settings, HexSettings hexSettings)
     {
-        super(structureSets, noiseParameters, biomeSource, settings);
-
-        this.noiseParameters = noiseParameters;
+        super(biomeSource, settings);
         this.settings = settings;
         this.hexSettings = hexSettings;
 
+        this.stupidMojangGlobalFluidPicker = Suppliers.memoize(() -> {
+            final NoiseGeneratorSettings noiseGeneratorSettings = settings.value();
+            final Aquifer.FluidStatus lavaAtNeg54 = new Aquifer.FluidStatus(-54, Blocks.LAVA.defaultBlockState());
+            final int seaLevel = noiseGeneratorSettings.seaLevel();
+            final Aquifer.FluidStatus waterAtSeaLevel = new Aquifer.FluidStatus(seaLevel, noiseGeneratorSettings.defaultFluid());
 
-        final NoiseGeneratorSettings noiseGeneratorSettings = settings.value();
-        final Aquifer.FluidStatus lavaAtNeg54 = new Aquifer.FluidStatus(-54, Blocks.LAVA.defaultBlockState());
-        final int seaLevel = noiseGeneratorSettings.seaLevel();
-        final Aquifer.FluidStatus waterAtSeaLevel = new Aquifer.FluidStatus(seaLevel, noiseGeneratorSettings.defaultFluid());
-        this.stupidMojangGlobalFluidPicker = (x, y, z) -> y < Math.min(-54, seaLevel) ? lavaAtNeg54 : waterAtSeaLevel;
+            return (x, y, z) -> y < Math.min(-54, seaLevel) ? lavaAtNeg54 : waterAtSeaLevel;
+        });
     }
 
     @Override
@@ -107,10 +101,10 @@ public class HexChunkGenerator extends NoiseBasedChunkGenerator
     }
 
     @Override
-    public NoiseColumn getBaseColumn(int x, int z, LevelHeightAccessor level, RandomState state)
+    public int getBaseHeight(int x, int z, Heightmap.Types type, LevelHeightAccessor level, RandomState state)
     {
         HexRandomState.modify(state, settings.value(), hexSettings);
-        return super.getBaseColumn(x, z, level, state);
+        return super.getBaseHeight(x, z, type, level, state);
     }
 
     @Override
@@ -192,7 +186,7 @@ public class HexChunkGenerator extends NoiseBasedChunkGenerator
 
     private NoiseChunk getOrCreateNoiseChunk(ChunkAccess chunk, RandomState state, StructureManager structureManager, Blender blender)
     {
-        return chunk.getOrCreateNoiseChunk(c -> NoiseChunk.forChunk(c, state, Beardifier.forStructuresInChunk(structureManager, c.getPos()), settings.value(), stupidMojangGlobalFluidPicker, blender));
+        return chunk.getOrCreateNoiseChunk(c -> NoiseChunk.forChunk(c, state, Beardifier.forStructuresInChunk(structureManager, c.getPos()), settings.value(), stupidMojangGlobalFluidPicker.get(), blender));
     }
 
     record PlacedHex(Hex hex, Holder<Biome> biome, double preliminaryHeight, int minY, int maxY, int borderMinY, int borderMaxY, BlockState borderMinState, BlockState borderMaxState) {}
