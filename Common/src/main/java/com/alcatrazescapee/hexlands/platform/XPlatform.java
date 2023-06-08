@@ -16,8 +16,6 @@ public interface XPlatform
             .orElseThrow(() -> new NullPointerException("Failed to load service for " + clazz.getName()));
     }
 
-    boolean isNoiseDensityFunction(DensityFunction f);
-
     /** Fabric does a stupid thing and sets a cached seed on `Climate.Sampler`, and then blows up if it's not there... how annoying */
     default void copyFabricCachedClimateSamplerSeed(Climate.Sampler from, Climate.Sampler to) {}
 }

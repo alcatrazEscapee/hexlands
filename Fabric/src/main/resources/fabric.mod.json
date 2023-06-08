@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
-  "id": "${mod_id}",
-  "version": "${version}",
-  "name": "${mod_name}",
-  "description": "Remakes the overworld, Settlers of Catan style.",
+  "id": "${modId}",
+  "version": "${modVersion}",
+  "name": "${modName}",
+  "description": "${modDescription}",
   "authors": [
-    "${mod_author}"
+    "${modAuthor}"
   ],
   "contact": {
-    "homepage": "https://www.curseforge.com/minecraft/mc-mods/hexlands-ii",
-    "sources": "https://github.com/alcatrazEscapee/hexlands"
+    "homepage": "${modHomeUrl}",
+    "sources": "${modIssueUrl}"
   },
   "license": "MIT",
   "environment": "*",
@@ -21,14 +21,14 @@
     ]
   },
   "mixins": [
-    "hexlands.mixins.json",
-    "hexlands.common.mixins.json"
+    "${modId}.mixins.json",
+    "${modId}.common.mixins.json"
   ],
   "depends": {
-    "fabricloader": ">=0.14",
-    "fabric": "*",
-    "minecraft": ">=1.19.3",
-    "java": ">=17"
+    "fabricloader": ">=${fabricLoaderVersion}",
+    "fabric": ">=${fabricVersion}",
+    "minecraft": ">=${minecraftVersion}",
+    "java": ">=${modJavaVersion}"
   },
-  "accessWidener": "hexlands.accesswidener"
+  "accessWidener": "${modId}.accesswidener"
 }

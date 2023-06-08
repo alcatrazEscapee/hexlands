@@ -13,6 +13,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.util.KeyDispatchDataCodec;
 import net.minecraft.world.level.biome.Climate;
 import net.minecraft.world.level.levelgen.DensityFunction;
+import net.minecraft.world.level.levelgen.DensityFunctions;
 import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
 import net.minecraft.world.level.levelgen.NoiseRouter;
 import net.minecraft.world.level.levelgen.RandomState;
@@ -30,7 +31,7 @@ public record HexRandomState(RandomState state, NoiseRouter hexRouter, Climate.S
         {
             return RANDOM_STATE_EXTENSIONS.get(state, () -> {
                 final DensityFunction.Visitor visitor = f -> {
-                    if (XPlatform.INSTANCE.isNoiseDensityFunction(f))
+                    if (isNoiseDensityFunction(f))
                     {
                         return sampleHexRelative(hexSettings, f);
                     }
@@ -80,6 +81,11 @@ public record HexRandomState(RandomState state, NoiseRouter hexRouter, Climate.S
         {
             throw new RuntimeException("Failed to inject HexRandomState into RandomState", e);
         }
+    }
+
+    private static boolean isNoiseDensityFunction(DensityFunction f)
+    {
+        return f instanceof DensityFunctions.Noise || f instanceof DensityFunctions.Shift || f instanceof DensityFunctions.ShiftedNoise;
     }
 
     private static DensityFunction sampleHexCenter(HexSettings hexSettings, DensityFunction function)

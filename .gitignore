@@ -7,7 +7,7 @@
 !/gradle/wrapper/gradle-wrapper.jar
 !/gradle/wrapper/gradle-wrapper.properties
 
-!/**/build.gradle
+!/**/build.gradle.kts
 !/**/src/**/*.*
 
 !/img/**/*.png
@@ -16,6 +16,6 @@
 !/gradle.properties
 !/gradlew
 !/gradlew.bat
-!/settings.gradle
+!/settings.gradle.kts
 !/LICENSE
 !/README.md

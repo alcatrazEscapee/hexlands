@@ -1,27 +1,28 @@
-# Loader metadata
+# Loader Metadata
 modLoader = "javafml"
-loaderVersion = "[40,)"
+loaderVersion = "${forgeVersionRange}"
 license = "MIT"
-issueTrackerURL = "https://github.com/AlcatrazEscapee/HexLands/issues"
+issueTrackerURL = "${modIssueUrl}"
 
 [[mods]]
-    modId = "hexlands"
-    version = "${file.jarVersion}"
-    displayName = "HexLands"
-    credits = "By AlcatrazEscapee, based on original work by superfluke et. al."
-    authors = "AlcatrazEscapee"
-    description = "Remakes the overworld, Settlers of Catan style."
+    modId = "${modId}"
+    version = "${modVersion}"
+    displayName = "${modName}"
+    displayURL = "${modHomeUrl}"
+    logoFile = "logo.png"
+    authors = "${modAuthor}"
+    description = "${modDescription}"
 
-[[dependencies.hexlands]]
+[[dependencies.${modId}]]
     modId = "forge"
     mandatory = true
-    versionRange = "[38.0.0,)"
-    ordering = "AFTER"
+    versionRange = "${forgeVersionRange}"
+    ordering = "NONE"
     side = "BOTH"
 
-[[dependencies.hexlands]]
+[[dependencies.${modId}]]
     modId = "minecraft"
     mandatory = true
-    versionRange = "[1.19.3,)"
-    ordering = "AFTER"
+    versionRange = "${minecraftVersionRange}"
+    ordering = "NONE"
     side = "BOTH"

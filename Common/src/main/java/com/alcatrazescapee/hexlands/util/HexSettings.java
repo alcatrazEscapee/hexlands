@@ -31,7 +31,7 @@ public record HexSettings(double biomeScale, double hexSize, double hexBorderThr
         e -> e.map(
             l -> Optional.ofNullable(HexSettings.DEFAULTS.get(l))
                 .map(DataResult::success)
-                .orElseGet(() -> DataResult.error("No hex_settings named '" + l + "'")),
+                .orElseGet(() -> DataResult.error(() -> "No hex_settings named '" + l + "'")),
             DataResult::success),
         Either::right);
 
