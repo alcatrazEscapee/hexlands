@@ -21,8 +21,7 @@
     ]
   },
   "mixins": [
-    "${modId}.mixins.json",
-    "${modId}.common.mixins.json"
+    "${modId}.mixins.json"
   ],
   "depends": {
     "fabricloader": ">=${fabricLoaderVersion}",

@@ -1,20 +1,20 @@
 plugins {
-    java
-    id("org.spongepowered.gradle.vanilla") version "0.2.1-SNAPSHOT"
+    id("net.neoforged.moddev") version "0.1.112"
 }
 
-// From gradle.properties
-val minecraftVersion: String by extra
-
-minecraft {
-    accessWideners(project.file("src/main/resources/hexlands.common.accesswidener"))
-    version(minecraftVersion)
-}
+val parchmentMinecraftVersion: String by extra
+val parchmentVersion: String by extra
+val commonNeoFormVersion: String by extra
 
 dependencies {
     compileOnly(group = "org.spongepowered", name = "mixin", version = "0.8.5")
+}
 
-    testImplementation("org.quicktheories:quicktheories:0.26")
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.3.1")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.3.1")
+neoForge {
+    neoFormVersion.set(commonNeoFormVersion)
+
+    parchment {
+        minecraftVersion.set(parchmentMinecraftVersion)
+        mappingsVersion.set(parchmentVersion)
+    }
 }

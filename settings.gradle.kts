@@ -1,38 +1,27 @@
 pluginManagement {
     repositories {
+        gradlePluginPortal()
+        mavenCentral()
+
         fun exclusiveMaven(url: String, filter: Action<InclusiveRepositoryContentDescriptor>) =
             exclusiveContent {
                 forRepository { maven(url) }
                 filter(filter)
             }
 
-        exclusiveMaven("https://maven.minecraftforge.net") {
-            includeGroupByRegex("net\\.minecraftforge.*")
-        }
-        exclusiveMaven("https://maven.parchmentmc.org") {
-            includeGroupByRegex("org\\.parchmentmc.*")
-        }
-        exclusiveMaven("https://maven.fabricmc.net/") {
+        exclusiveMaven("https://maven.fabricmc.net") {
             includeGroup("net.fabricmc")
             includeGroup("fabric-loom")
         }
-        exclusiveMaven("https://repo.spongepowered.org/repository/maven-public/") {
-            includeGroupByRegex("org\\.spongepowered.*")
-        }
-        exclusiveMaven("https://alcatrazescapee.jfrog.io/artifactory/mods") {
-            includeGroupByRegex("com\\.alcatrazescapee.*")
-        }
-
-        gradlePluginPortal()
-    }
-    resolutionStrategy {
-        eachPlugin {
-            if (requested.id.id == "org.spongepowered.mixin") {
-                useModule("org.spongepowered:mixingradle:${requested.version}")
-            }
+        exclusiveMaven("https://maven.neoforged.net/releases") {
+            includeGroupAndSubgroups("net.neoforged")
         }
     }
 }
 
-rootProject.name = "HexLands-1.20"
-include("Common", "Fabric", "Forge")
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
+}
+
+rootProject.name = "HexLands-1.21"
+include("Common", "Fabric", "NeoForge")
