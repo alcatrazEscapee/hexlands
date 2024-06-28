@@ -20,6 +20,13 @@ subprojects {
     version = modVersion
     group = modGroup
 
+    repositories {
+        exclusiveContent {
+            forRepository { maven("https://maven.parchmentmc.org/") }
+            filter { includeGroup("org.parchmentmc.data") }
+        }
+    }
+
     tasks {
         withType<ProcessResources> {
             filesMatching(listOf("META-INF/neoforge.mods.toml", "pack.mcmeta", "fabric.mod.json")) {
