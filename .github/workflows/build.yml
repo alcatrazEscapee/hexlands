@@ -58,7 +58,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./Forge/build/libs/hexlands-neoforge-1.21-${{ steps.get_version.outputs.result }}.jar
+          asset_path: ./NeoForge/build/libs/hexlands-neoforge-1.21-${{ steps.get_version.outputs.result }}.jar
           asset_name: hexlands-neoforge-1.21-${{ steps.get_version.outputs.result }}.jar
           asset_content_type: application/java-archive
       - name: Upload Fabric Jar
