@@ -1,25 +1,20 @@
 package com.alcatrazescapee.hexlands;
 
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.fml.common.Mod;
-
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import com.mojang.serialization.MapCodec;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.level.chunk.ChunkGenerator;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.registries.DeferredRegister;
 
 @Mod(HexLands.MOD_ID)
 public final class ForgeHexLands
 {
-    public ForgeHexLands()
+    private final DeferredRegister<MapCodec<? extends ChunkGenerator>> registry = DeferredRegister.create(BuiltInRegistries.CHUNK_GENERATOR, HexLands.MOD_ID);
+
+    public ForgeHexLands(IEventBus bus)
     {
-        HexLands.init();
-
-        final IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
-
-        modBus.addListener(this::setup);
-    }
-
-    private void setup(FMLCommonSetupEvent event)
-    {
-        event.enqueueWork(HexLands::registerCodecs);
+        HexLands.init((id, e) -> registry.register(id.getPath(), () -> e));
+        registry.register(bus);
     }
 }

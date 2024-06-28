@@ -44,7 +44,7 @@ public record HexSettings(double biomeScale, double hexSize, double hexBorderThr
 
     private static void register(String id, HexSettings settings)
     {
-        DEFAULTS.put(new ResourceLocation(HexLands.MOD_ID, id), settings);
+        DEFAULTS.put(ResourceLocation.fromNamespaceAndPath(HexLands.MOD_ID, id), settings);
     }
 
     public record BorderSettings(int minHeight, int maxHeight, BlockState state)

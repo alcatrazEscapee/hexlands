@@ -3,8 +3,8 @@ package com.alcatrazescapee.hexlands.util;
 import net.minecraft.core.BlockPos;
 
 /**
- * See https://www.redblobgames.com/grids/hexagons/
- * Axial / Cube coordinates: q = x, r = z
+ * Based on <a href="https://www.redblobgames.com/grids/hexagons/">Red Blob Games</a> article, using Axial / Cube coordinates,
+ * where {@code q = x, r = z}
  */
 public record Hex(int q, int r, double size)
 {
@@ -136,7 +136,8 @@ public record Hex(int q, int r, double size)
     }
 
     /**
-     * Calculates the angular radius between an axial coordinate {@code (q, r)}, representing the hex center, and an axial coordinate {@code (fq, fr)} representing another point in the hex.
+     * Calculates the angular radius between an axial coordinate {@code (q, r)}, representing the hex center, and an axial
+     * coordinate {@code (fq, fr)} representing another point in the hex.
      *
      * @return A value in the range [0, 1].
      */
@@ -184,16 +185,6 @@ public record Hex(int q, int r, double size)
         final double fq = blockToHexQ(x, size);
         final double fr = blockToHexR(x, z, size);
         return Hex.adjacent(q, r, fq, fr, size);
-    }
-
-    public double x()
-    {
-        return hexToBlockX(q, size);
-    }
-
-    public double z()
-    {
-        return hexToBlockZ(q, r, size);
     }
 
     @Override

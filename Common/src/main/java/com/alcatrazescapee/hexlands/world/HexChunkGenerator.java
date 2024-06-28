@@ -4,6 +4,7 @@ import java.util.*;
 import java.util.function.Supplier;
 
 import com.google.common.base.Suppliers;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.QuartPos;
@@ -31,7 +32,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class HexChunkGenerator extends NoiseBasedChunkGenerator
 {
-    public static final Codec<HexChunkGenerator> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<HexChunkGenerator> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
         BiomeSource.CODEC.fieldOf("biome_source").forGetter(c -> c.biomeSource),
         NoiseGeneratorSettings.CODEC.fieldOf("settings").forGetter(c -> c.settings),
         HexSettings.CODEC.fieldOf("hex_settings").forGetter(c -> c.hexSettings)
@@ -59,7 +60,7 @@ public class HexChunkGenerator extends NoiseBasedChunkGenerator
     }
 
     @Override
-    protected Codec<HexChunkGenerator> codec()
+    protected MapCodec<HexChunkGenerator> codec()
     {
         return CODEC;
     }
