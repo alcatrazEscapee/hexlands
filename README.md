@@ -18,10 +18,10 @@ This mod is an updated and rewritten version of the original [Hex Lands](https:/
 - For [1.17](https://github.com/alcatrazEscapee/hexlands/blob/1.17.x/README.md#configuration-data-packs)
 - For [1.16](https://github.com/alcatrazEscapee/hexlands/blob/1.16.x/README.md#configuration-data-packs)
 
-Worlds are specified by [World Presets](https://minecraft.fandom.com/wiki/World_preset). HexLands can be customized by adding a new world preset, which uses the `hexlands:hexlands` chunk generator. The hexlands chunk generator has the following fields:
+Worlds are specified by [World Presets](https://minecraft.wiki/w/World_preset). HexLands can be customized by adding a new world preset, which uses the `hexlands:hexlands` chunk generator. The hexlands chunk generator has the following fields:
 
 - `type` is a string identifying what generator to use. It should be `hexlands:hexlands`.
-- `settings` is a [Noise Settings](https://minecraft.fandom.com/wiki/Custom_world_generation#Noise_settings) used by the dimension.
+- `settings` is a [Noise Settings](https://minecraft.wiki/w/Noise_settings) used by the dimension.
 - `biome_source` is the biome source, as in vanilla. It can be a known preset, such as `"minecraft:overworld"`, or `"minecraft:nether"`, or it can be a JSON object following the vanilla biome source format.
 - `hex_settings` is an object with parameters defining how the hexagonal grid works. It can either be a known preset, which must be one of `"hexlands:overworld"`, `"hexlands:nether"`, or `"hexlands:the_end"`, or it can be an object with the following fields:
     - `biome_scale` (Default: 8) is the scale at which biomes are sampled to create hexes. Higher values create more random biome layouts.
